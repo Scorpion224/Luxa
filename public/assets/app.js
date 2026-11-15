@@ -70,7 +70,7 @@
       }
     }
     if (res.status === 401 && !String(path).startsWith('/api/auth/')) {
-      state.authNotice = 'Votre session a expiré. Reconnectez-vous pour continuer.';
+      state.authNotice = 'Votre session a expiré — reconnectez-vous en un clic sur un espace ci-dessous.';
       signOut(true);
       const expired = new Error('Session expirée, veuillez vous reconnecter');
       expired.status = 401;
@@ -174,6 +174,14 @@
     planning: 'planning',
     commandes: 'commandes'
   };
+
+  const DEMO_KEY = 'ppg.demoRole';
+  function loadDemoRole() {
+    try { return localStorage.getItem(DEMO_KEY) || ''; } catch (err) { return ''; }
+  }
+  function saveDemoRole(role) {
+    try { if (role) localStorage.setItem(DEMO_KEY, role); else localStorage.removeItem(DEMO_KEY); } catch (err) {}
+  }
 
   function loadSession() {
     try {
@@ -498,6 +506,7 @@
       if (!creds.email || !creds.password) throw err;
       data = await api('/api/auth/login', { method: 'POST', body: { email: creds.email, password: creds.password } });
     }
+    saveDemoRole(role);
     await afterSignIn(data);
   }
 
@@ -508,7 +517,7 @@
       fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }).catch(() => {});
     }
     state.draft = null;
-    if (!silent) state.authNotice = null;
+    if (!silent) { state.authNotice = null; saveDemoRole(''); }
     closeUserMenu();
     persistSession(null);
     closeModal();
@@ -3223,19 +3232,41 @@
     state.session = loadSession();
     const hadSession = !!state.session;
     let restored = null;
+    let rejected = false;
     try {
       const res = await fetch('/api/auth/me', {
         headers: state.session ? { Authorization: 'Bearer ' + state.session.token } : {}
       });
       if (res.ok) {
         const data = await res.json();
-        restored = { token: data.token || (state.session && state.session.token), user: data.user };
+        if (data && data.user) {
+          restored = { token: data.token || (state.session && state.session.token), user: data.user };
+        }
+      } else if (res.status === 401) {
+        rejected = true;
       }
     } catch (err) { /* serveur injoignable : l'écran de connexion l'indiquera */ }
+
+    // Redémarrage du serveur, base réinitialisée, jeton trop vieux : si l'utilisateur
+    // était dans un espace de démonstration, on le rebranche tout seul, sans écran de
+    // connexion ni message d'erreur.
+    if (!restored && rejected) {
+      const demoRole = loadDemoRole();
+      if (demoRole) {
+        try {
+          const data = await api('/api/auth/demo', { method: 'POST', body: { role: demoRole } });
+          if (data && data.token) restored = { token: data.token, user: data.user };
+        } catch (err) { /* on retombe sur l'écran de connexion */ }
+      }
+    }
+
     if (restored && restored.token) {
       persistSession(restored);
-    } else if (hadSession) {
-      state.authNotice = 'Votre session a expiré. Reconnectez-vous pour continuer.';
+      state.authNotice = null;
+    } else if (hadSession || rejected) {
+      if (hadSession || loadDemoRole()) {
+        state.authNotice = 'Votre session a expiré — reconnectez-vous en un clic sur un espace ci-dessous.';
+      }
       persistSession(null);
     }
     syncSessionUI();
