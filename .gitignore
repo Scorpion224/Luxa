@@ -7,3 +7,6 @@ npm-debug.log*
 
 # captures de vérification locales
 captures/
+
+# archive téléchargeable générée localement
+*.zip
