@@ -1083,7 +1083,14 @@ body.auth-mode .view { overflow: visible; }
   padding: 28px 28px 22px;
   text-align: center;
 }
-.auth-logo { width: 132px; margin: 0 auto 10px; display: block; mix-blend-mode: multiply; }
+.auth-logo {
+  width: 150px;
+  margin: 0 auto 12px;
+  display: block;
+  background: #f8f0e6;
+  border-radius: 14px;
+  padding: 8px 10px;
+}
 .auth-card h1 { font-size: 25px; font-weight: 700; color: #112f35; letter-spacing: -0.02em; }
 .auth-sub { font-size: 13px; color: #6d7d7d; margin-top: 6px; }
 
