@@ -127,7 +127,7 @@ window.addEventListener('hashchange', () => {
   // était dans un espace de démonstration, on le rebranche tout seul, sans écran de
   // connexion ni message d'erreur.
   if (!restored && rejected) {
-    const demoRole = loadDemoRole();
+    const demoRole = wanted || loadDemoRole();
     if (demoRole) {
       try {
         const data = await api('/api/auth/demo', { method: 'POST', body: { role: demoRole } });
@@ -138,15 +138,16 @@ window.addEventListener('hashchange', () => {
     }
   }
 
+  // Espace demandé par l'URL (menu « Changer d'espace », lien /demo/...) :
+  // on l'ouvre même si une autre session était encore active, et même sans session.
+  let wanted = '';
+  try {
+    wanted = new URLSearchParams(location.search).get('espace') || '';
+  } catch (err) {}
+
   if (restored && restored.token) {
     persistSession(restored);
     state.authNotice = null;
-    // Changement d'espace demandé par l'URL (menu « Changer d'espace ») :
-    // on ouvre l'espace demandé même si une autre session était encore active.
-    let wanted = '';
-    try {
-      wanted = new URLSearchParams(location.search).get('espace') || '';
-    } catch (err) {}
     if (wanted && (!restored.user || restored.user.role !== wanted)) {
       try {
         const data = await api('/api/auth/demo', { method: 'POST', body: { role: wanted } });
@@ -188,7 +189,7 @@ window.addEventListener('hashchange', () => {
       voluntaryLogout = sessionStorage.getItem('ppg.loggedOut') === '1';
     } catch (err) {}
     if (!voluntaryLogout && !forceLogin && state.demoMode !== false) {
-      const role = loadDemoRole() || 'admin';
+      const role = wanted || loadDemoRole() || 'admin';
       try {
         const data = await api('/api/auth/demo', { method: 'POST', body: { role: role } });
         if (data && data.token) {
