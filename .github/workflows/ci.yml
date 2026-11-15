@@ -33,7 +33,20 @@ jobs:
         run: npm run format:check
 
       - name: Lancer les tests
-        run: npm test
+        run: |
+          set +e
+          npm test 2>&1 | tee /tmp/tests.log
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then
+            # remonte les tests en échec sous forme d'annotation lisible
+            grep -E '^not ok' /tmp/tests.log | head -20 | while read -r line; do
+              echo "::error::$line"
+            done
+            tail -40 /tmp/tests.log | while read -r line; do
+              echo "::error::$line"
+            done
+          fi
+          exit "$code"
 
       - name: Démarrer l'application et vérifier /api/health
         run: |
