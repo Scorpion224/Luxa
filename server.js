@@ -196,6 +196,30 @@ function publicUser(user) {
   };
 }
 
+/* Sessions de démonstration (en mémoire — redémarrer le serveur déconnecte tout le monde) */
+const sessions = new Map();
+
+function currentUser(req) {
+  const header = String(req.headers.authorization || '');
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  if (!token) return null;
+  const session = sessions.get(token);
+  if (!session) return null;
+  return db.users.find((u) => u.id === session.userId) || null;
+}
+
+function requirePermission(permission) {
+  return (req, res, next) => {
+    const user = currentUser(req);
+    if (!user) return res.status(401).json({ error: 'Session expirée, veuillez vous reconnecter' });
+    if (!roles.can(user.role, permission)) {
+      return res.status(403).json({ error: 'Action non autorisée pour votre rôle (' + (ROLE_LABEL[user.role] || user.role) + ')' });
+    }
+    req.user = user;
+    next();
+  };
+}
+
 app.get('/api/roles', (req, res) => {
   res.json({
     roles: Object.keys(roles.ROLE_PERMISSIONS).map((key) => ({
@@ -232,10 +256,22 @@ app.post('/api/auth/login', (req, res) => {
   }
   user.lastLoginAt = new Date().toISOString();
   save();
-  res.json({
-    token: 'demo-' + user.id + '-' + Date.now(),
-    user: publicUser(user)
-  });
+  const token = 'demo-' + user.id + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  sessions.set(token, { userId: user.id, createdAt: Date.now() });
+  res.json({ token, user: publicUser(user) });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const header = String(req.headers.authorization || '');
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  if (token) sessions.delete(token);
+  res.json({ ok: true });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: 'Session expirée' });
+  res.json({ user: publicUser(user) });
 });
 
 app.get('/api/categories', (req, res) => {
@@ -277,7 +313,7 @@ app.get('/api/stocks', (req, res) => {
   res.json(stocks);
 });
 
-app.patch('/api/products/:id/stock', (req, res) => {
+app.patch('/api/products/:id/stock', requirePermission('stocks:write'), (req, res) => {
   const product = db.products.find((p) => p.id === req.params.id);
   if (!product) return res.status(404).json({ error: 'Produit non trouvé' });
   const delta = Number(req.body.delta) || 0;
@@ -310,7 +346,7 @@ app.get('/api/clients', (req, res) => {
   res.json(withStats);
 });
 
-app.post('/api/clients', (req, res) => {
+app.post('/api/clients', requirePermission('clients:write'), (req, res) => {
   const { name, phone, email, city, company, contact, address, type } = req.body || {};
   if (!name || !String(name).trim()) return res.status(400).json({ error: 'Le nom est obligatoire' });
   const client = {
@@ -379,7 +415,7 @@ app.get('/api/quotes-draft', (req, res) => {
   res.json(db.draftQuote);
 });
 
-app.post('/api/quotes', (req, res) => {
+app.post('/api/quotes', requirePermission('devis:write'), (req, res) => {
   const body = req.body || {};
   const client = db.clients.find((c) => c.id === body.clientId);
   const calc = calculateQuote({
@@ -432,7 +468,7 @@ app.post('/api/quotes', (req, res) => {
   res.status(201).json(quote);
 });
 
-app.patch('/api/quotes/:id', (req, res) => {
+app.patch('/api/quotes/:id', requirePermission('devis:write'), (req, res) => {
   const quote = findQuote(req.params.id);
   if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
   const allowed = ['clientId', 'clientName', 'subject', 'site', 'status', 'relance', 'notes', 'validUntil', 'total', 'subtotal', 'tvaAmount', 'lines', 'rooms', 'surface', 'finish'];
@@ -443,7 +479,7 @@ app.patch('/api/quotes/:id', (req, res) => {
   res.json(enrichQuote(quote));
 });
 
-app.post('/api/quotes/:id/status', (req, res) => {
+app.post('/api/quotes/:id/status', requirePermission('devis:write'), (req, res) => {
   const quote = findQuote(req.params.id);
   if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
   const status = req.body.status;
@@ -457,7 +493,7 @@ app.post('/api/quotes/:id/status', (req, res) => {
   res.json(enrichQuote(quote));
 });
 
-app.delete('/api/quotes/:id', (req, res) => {
+app.delete('/api/quotes/:id', requirePermission('devis:write'), (req, res) => {
   const index = db.quotes.findIndex((q) => q.id === req.params.id);
   if (index === -1) return res.status(404).json({ error: 'Devis non trouvé' });
   db.quotes.splice(index, 1);
@@ -533,7 +569,7 @@ app.get('/api/payments/:quoteId', (req, res) => {
   });
 });
 
-app.post('/api/payments/:quoteId/pay', (req, res) => {
+app.post('/api/payments/:quoteId/pay', requirePermission('paiement:write'), (req, res) => {
   const quote = findQuote(req.params.quoteId);
   if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
   const body = req.body || {};
@@ -578,7 +614,7 @@ app.post('/api/payments/:quoteId/pay', (req, res) => {
   res.status(201).json({ payment, ...paymentSummary(quote) });
 });
 
-app.post('/api/payments/:quoteId/schedule', (req, res) => {
+app.post('/api/payments/:quoteId/schedule', requirePermission('paiement:write'), (req, res) => {
   const quote = findQuote(req.params.quoteId);
   if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
   const { step, amount, dueDate } = req.body || {};
@@ -595,7 +631,7 @@ app.post('/api/payments/:quoteId/schedule', (req, res) => {
   res.status(201).json(paymentSummary(quote));
 });
 
-app.post('/api/payments/:quoteId/schedule/init', (req, res) => {
+app.post('/api/payments/:quoteId/schedule/init', requirePermission('paiement:write'), (req, res) => {
   const quote = findQuote(req.params.quoteId);
   if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
   if (!quote.schedule || !quote.schedule.length) {
@@ -627,7 +663,7 @@ app.get('/api/acomptes', (req, res) => {
   res.json(items);
 });
 
-app.post('/api/acomptes', (req, res) => {
+app.post('/api/acomptes', requirePermission('paiement:write'), (req, res) => {
   const { clientId, quoteId, amount, date, method, reference, notes } = req.body || {};
   const client = db.clients.find((c) => c.id === clientId);
   if (!client) return res.status(404).json({ error: 'Client non trouvé' });
@@ -649,7 +685,7 @@ app.post('/api/acomptes', (req, res) => {
   res.status(201).json(payment);
 });
 
-app.delete('/api/acomptes/:id', (req, res) => {
+app.delete('/api/acomptes/:id', requirePermission('paiement:write'), (req, res) => {
   const index = db.payments.findIndex((p) => p.id === req.params.id);
   if (index === -1) return res.status(404).json({ error: 'Acompte non trouvé' });
   db.payments.splice(index, 1);
@@ -665,7 +701,7 @@ function nowLabel() {
   return date.replace('.', '.') + ' à ' + time;
 }
 
-app.post('/api/payments/:quoteId/financing/advance', (req, res) => {
+app.post('/api/payments/:quoteId/financing/advance', requirePermission('paiement:write'), (req, res) => {
   const quote = findQuote(req.params.quoteId);
   if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
   if (!quote.financing) {
@@ -710,7 +746,7 @@ app.get('/api/chantiers', (req, res) => {
   res.json(db.chantiers.map((c) => ({ ...c, progress: Number(c.progress) || 0 })));
 });
 
-app.post('/api/chantiers', (req, res) => {
+app.post('/api/chantiers', requirePermission('chantiers:write'), (req, res) => {
   const body = req.body || {};
   if (!body.name) return res.status(400).json({ error: 'Le nom du chantier est obligatoire' });
   const client = db.clients.find((c) => c.id === body.clientId);
@@ -736,7 +772,7 @@ app.post('/api/chantiers', (req, res) => {
   res.status(201).json(chantier);
 });
 
-app.patch('/api/chantiers/:id', (req, res) => {
+app.patch('/api/chantiers/:id', requirePermission('chantiers:write'), (req, res) => {
   const chantier = db.chantiers.find((c) => c.id === req.params.id);
   if (!chantier) return res.status(404).json({ error: 'Chantier non trouvé' });
   ['progress', 'status', 'spent', 'chef', 'team', 'endDate'].forEach((key) => {

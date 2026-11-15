@@ -19,6 +19,23 @@ npm run dev      # idem avec rechargement du serveur
 Pour repartir des données de démonstration : supprimer `data/db.json` puis relancer.
 Le jeu de démonstration est régénéré automatiquement par `data/seed.js`.
 
+## Connexion
+
+L'application démarre sur un écran de connexion. Un clic sur un compte de
+démonstration remplit le formulaire et ouvre la session immédiatement.
+
+- l'utilisateur est stocké côté navigateur (`localStorage`, clé `ppg.session`) ;
+- chaque appel d'API envoie `Authorization: Bearer <token>` ;
+- le serveur vérifie le jeton et la permission de l'action (`401` sans session,
+  `403` si le rôle n'a pas le droit) ;
+- les entrées de menu et les boutons d'action sont masqués selon les permissions,
+  et une route interdite affiche une page « Accès restreint » ;
+- le menu du compte (en haut à droite) affiche le nom, l'email et le rôle, et
+  permet de se déconnecter.
+
+Les sessions sont conservées **en mémoire** dans le serveur : un redémarrage
+déconnecte tout le monde (le navigateur revient à l'écran de connexion).
+
 ## Comptes de démonstration
 
 | Rôle | Email | Mot de passe |
@@ -80,7 +97,10 @@ TVA 338 000 ; **total 6 420 000 GNF**.
 | --- | --- | --- |
 | GET | `/api/health` | État du service |
 | GET | `/api/users` · `/api/users/:id` | Comptes utilisateurs (filtre `?role=`) |
+| GET | `/api/roles` | Rôles, résumés, permissions et modules |
 | POST | `/api/auth/login` | Connexion `{ email, password }` → jeton de démo + profil |
+| POST | `/api/auth/logout` | Ferme la session courante |
+| GET | `/api/auth/me` | Profil du porteur du jeton (401 si expiré) |
 | GET | `/api/company` | Société (nom, TVA, adresse) |
 | GET | `/api/categories` · `/api/products` | Catalogue (filtres `?category=`, `?q=`) |
 | GET/PATCH | `/api/products/:id/stock` | Ajustement de stock |

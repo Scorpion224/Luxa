@@ -48,6 +48,8 @@
 
   async function api(path, options) {
     const opts = Object.assign({ headers: {} }, options || {});
+    const token = state.session && state.session.token;
+    if (token) opts.headers.Authorization = 'Bearer ' + token;
     if (opts.body && typeof opts.body !== 'string') {
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(opts.body);
@@ -55,6 +57,10 @@
     const res = await fetch(path, opts);
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
+    if (res.status === 401 && !String(path).startsWith('/api/auth/login')) {
+      signOut(true);
+      throw new Error('Session expirée, veuillez vous reconnecter');
+    }
     if (!res.ok) throw new Error((data && data.error) || 'Erreur serveur');
     return data;
   }
@@ -101,6 +107,8 @@
   /* ---------------------------------------------------------------------- */
   const state = {
     company: null,
+    session: null,
+    roles: null,
     route: 'devis',
     token: 0,
     draft: null,
@@ -112,6 +120,75 @@
     clientsSearch: '',
     stocksSearch: ''
   };
+
+  /* ---------------------------------------------------------------------- */
+  /* Session, rôles & permissions                                        */
+  /* ---------------------------------------------------------------------- */
+  const SESSION_KEY = 'ppg.session';
+  const MODULE_PERMISSION = {
+    devis: 'devis:read',
+    catalogue: 'catalogue:read',
+    clients: 'clients:read',
+    stocks: 'stocks:read',
+    chantiers: 'chantiers:read',
+    finance: 'finance:read',
+    paiement: 'paiement:read'
+  };
+  const ROUTE_MODULE = {
+    devis: 'devis',
+    'devis/nouveau': 'devis',
+    catalogue: 'catalogue',
+    clients: 'clients',
+    stocks: 'stocks',
+    chantiers: 'chantiers',
+    finance: 'finance',
+    paiement: 'paiement'
+  };
+
+  function loadSession() {
+    try {
+      return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+    } catch (err) {
+      return null;
+    }
+  }
+  function persistSession(session) {
+    state.session = session;
+    try {
+      if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      else localStorage.removeItem(SESSION_KEY);
+    } catch (err) { /* stockage indisponible : session en mémoire seulement */ }
+    syncSessionUI();
+  }
+  const currentUser = () => (state.session && state.session.user) || null;
+
+  function can(permission) {
+    const user = currentUser();
+    if (!user) return false;
+    const perms = user.permissions || [];
+    return perms.includes('*') || perms.includes(permission);
+  }
+  const canModule = (moduleKey) => can(MODULE_PERMISSION[moduleKey] || '');
+  function canRoute(route) {
+    const mod = ROUTE_MODULE[route];
+    if (!mod) return true;
+    if (!canModule(mod)) return false;
+    if (route === 'devis/nouveau') return can('devis:write');
+    return true;
+  }
+  function firstAllowedRoute() {
+    const order = ['devis', 'catalogue', 'clients', 'stocks', 'chantiers', 'finance', 'paiement'];
+    return order.find((r) => canRoute(r)) || 'devis';
+  }
+
+  function initialsOf(name) {
+    return String(name || '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0].toUpperCase())
+      .join('');
+  }
 
   /* ---------------------------------------------------------------------- */
   /* Gabarits communs                                                    */
@@ -148,6 +225,187 @@
   }
 
   /* ---------------------------------------------------------------------- */
+  /* Authentification                                                    */
+  /* ---------------------------------------------------------------------- */
+  function syncSessionUI() {
+    const user = currentUser();
+    document.body.classList.toggle('auth-mode', !user);
+
+    const chip = document.getElementById('userChip');
+    if (chip) {
+      if (!user) {
+        chip.innerHTML = '';
+      } else {
+        chip.innerHTML = '<span class="avatar">' + esc(user.initials || initialsOf(user.name)) + '</span>' +
+          '<span>' + esc(user.roleLabel || user.role) + '</span>' +
+          '<i class="fa-solid fa-chevron-down"></i>';
+        chip.title = user.name + ' — ' + user.email;
+      }
+    }
+
+    document.querySelectorAll('.nav-item').forEach((el) => {
+      const mod = ROUTE_MODULE[el.dataset.route];
+      el.hidden = !!mod && !canModule(mod);
+    });
+  }
+
+  function accessDenied() {
+    const user = currentUser();
+    const roleLabel = (user && (user.roleLabel || user.role)) || 'votre rôle';
+    return pageHead({
+      title: 'Accès restreint',
+      sub: 'Cette page n’est pas ouverte à votre rôle.'
+    }) +
+      '<div class="page-body"><div class="card"><div class="denied">' +
+        '<span class="denied-icon"><i class="fa-solid fa-lock"></i></span>' +
+        '<h2>Accès restreint</h2>' +
+        '<p>Le rôle « ' + esc(roleLabel) + ' » n’a pas les droits nécessaires pour consulter cette page. ' +
+          'Connectez-vous avec un autre compte pour y accéder.</p>' +
+        '<button class="btn btn-primary" data-action="go-home">' +
+          '<i class="fa-solid fa-arrow-left"></i> Retour à l’accueil</button>' +
+      '</div></div></div>';
+  }
+
+  function renderLoginScreen() {
+    const demo = (state.roles && state.roles.roles) || [];
+    const accounts = demo.length ? demo : [
+      { label: 'Administrateur', key: 'admin' },
+      { label: 'Commercial', key: 'commercial' },
+      { label: 'Comptable', key: 'comptable' },
+      { label: 'Stockiste', key: 'stockiste' }
+    ];
+    const emails = {
+      admin: 'admin@peinturepro.gn',
+      commercial: 'commercial@peinturepro.gn',
+      comptable: 'comptable@peinturepro.gn',
+      stockiste: 'stock@peinturepro.gn'
+    };
+    const passwords = {
+      admin: 'admin123',
+      commercial: 'com123',
+      comptable: 'compta123',
+      stockiste: 'stock123'
+    };
+    const demoButtons = accounts.map((role) =>
+      '<button type="button" class="auth-demo-btn" data-demo-email="' + esc(emails[role.key] || '') + '" data-demo-password="' + esc(passwords[role.key] || '') + '">' +
+        '<span class="auth-demo-role">' + esc(role.label) + '</span>' +
+        '<span class="auth-demo-mail">' + esc(emails[role.key] || '') + '</span>' +
+      '</button>'
+    ).join('');
+
+    view.innerHTML =
+      '<div class="auth-screen">' +
+        '<div class="auth-card">' +
+          '<img class="auth-logo" src="assets/logo.png" alt="Peinture Pro Guinée">' +
+          '<h1>Connexion</h1>' +
+          '<p class="auth-sub">Accédez à votre espace de gestion commerciale.</p>' +
+          '<form id="loginForm" class="auth-form" novalidate>' +
+            '<div class="field"><label for="loginEmail">Adresse email</label>' +
+              '<input class="input" id="loginEmail" type="email" autocomplete="username" placeholder="prenom@peinturepro.gn"></div>' +
+            '<div class="field"><label for="loginPassword">Mot de passe</label>' +
+              '<input class="input" id="loginPassword" type="password" autocomplete="current-password" placeholder="••••••••"></div>' +
+            '<div class="auth-error" id="loginError" hidden></div>' +
+            '<button class="btn btn-primary auth-submit" type="submit"><i class="fa-solid fa-arrow-right-to-bracket"></i> Se connecter</button>' +
+          '</form>' +
+          '<div class="auth-demo">' +
+            '<div class="auth-demo-title">Comptes de démonstration</div>' +
+            '<div class="auth-demo-list">' + demoButtons + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    const form = document.getElementById('loginForm');
+    const errorBox = document.getElementById('loginError');
+    const showError = (message) => {
+      errorBox.textContent = message;
+      errorBox.hidden = false;
+    };
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      if (!email || !password) return showError('Renseignez votre email et votre mot de passe.');
+      errorBox.hidden = true;
+      signIn(email, password).catch((err) => showError(err.message));
+    });
+
+    view.querySelectorAll('[data-demo-email]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.getElementById('loginEmail').value = btn.dataset.demoEmail;
+        document.getElementById('loginPassword').value = btn.dataset.demoPassword;
+        errorBox.hidden = true;
+        signIn(btn.dataset.demoEmail, btn.dataset.demoPassword).catch((err) => showError(err.message));
+      });
+    });
+  }
+
+  async function signIn(email, password) {
+    const data = await api('/api/auth/login', { method: 'POST', body: { email: email, password: password } });
+    persistSession({ token: data.token, user: data.user });
+    await loadData();
+    const route = getRoute();
+    const target = canRoute(route) ? route : firstAllowedRoute();
+    if (target !== route) location.hash = '#/' + target;
+    toast('Bienvenue ' + String(data.user.name || '').split(' ')[0]);
+    if (target === route) render();
+  }
+
+  function signOut(silent) {
+    const hadSession = !!state.session;
+    const token = state.session && state.session.token;
+    if (token) {
+      fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }).catch(() => {});
+    }
+    state.draft = null;
+    closeUserMenu();
+    persistSession(null);
+    closeModal();
+    if (!silent) toast('Vous êtes déconnecté');
+    if (hadSession) renderLoginScreen();
+  }
+
+  async function loadData() {
+    try {
+      state.company = await api('/api/company');
+      await ensureDraft();
+      state.products = await api('/api/products');
+      state.clients = await api('/api/clients');
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  /* Menu du compte */
+  function closeUserMenu() {
+    const menu = document.getElementById('userMenu');
+    if (menu) menu.remove();
+  }
+
+  function toggleUserMenu() {
+    if (document.getElementById('userMenu')) return closeUserMenu();
+    const user = currentUser();
+    if (!user) return;
+    const menu = document.createElement('div');
+    menu.id = 'userMenu';
+    menu.className = 'user-menu';
+    menu.innerHTML =
+      '<div class="user-menu-head">' +
+        '<span class="avatar">' + esc(user.initials || initialsOf(user.name)) + '</span>' +
+        '<div><div class="user-menu-name">' + esc(user.name) + '</div>' +
+        '<div class="user-menu-mail">' + esc(user.email) + '</div>' +
+        '<div class="user-menu-role">' + esc(user.roleLabel || user.role) + '</div></div>' +
+      '</div>' +
+      '<button class="user-menu-item" data-action="sign-out"><i class="fa-solid fa-arrow-right-from-bracket"></i> Se déconnecter</button>';
+    document.querySelector('.topbar').appendChild(menu);
+    menu.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="sign-out"]');
+      if (btn) signOut();
+    });
+  }
+
+
+  /* ---------------------------------------------------------------------- */
   /* Page — Tableau de bord / Devis                                       */
   /* ---------------------------------------------------------------------- */
   async function renderDevis() {
@@ -176,8 +434,9 @@
       return html;
     })();
 
+    const greetingRole = (currentUser() && (currentUser().roleLabel || currentUser().role)) || 'Commercial';
     return pageHead({
-      title: 'Bonjour Commercial !',
+      title: 'Bonjour ' + esc(greetingRole) + ' !',
       sub: 'Gérez vos devis, explorez notre catalogue et développez votre activité.'
     }) +
     '<div class="page-body">' +
@@ -211,7 +470,7 @@
               '<option value="amount_desc"' + (state.quotes.sort === 'amount_desc' ? ' selected' : '') + '>Montant décroissant</option>' +
               '<option value="client"' + (state.quotes.sort === 'client' ? ' selected' : '') + '>Client (A → Z)</option>' +
             '</select>' +
-            '<button class="btn btn-soft btn-sm" data-action="new-quote" title="Nouveau devis"><i class="fa-solid fa-plus"></i><span class="btn-label">Nouveau devis</span></button>' +
+            (can('devis:write') ? '<button class="btn btn-soft btn-sm" data-action="new-quote" title="Nouveau devis"><i class="fa-solid fa-plus"></i><span class="btn-label">Nouveau devis</span></button>' : '') +
           '</div>' +
           '<table class="data">' +
             '<thead><tr><th>N° Devis</th><th>Client</th><th>Montant</th><th>Statut</th><th class="right">Action</th></tr></thead>' +
@@ -642,7 +901,7 @@
             '<tbody>' + scheduleRows(data.schedule) + '</tbody>' +
           '</table>' +
         '</div>' +
-        '<div class="remaining-box clickable" role="button" tabindex="0" data-action="payment-new" title="Encaisser un paiement">' +
+        '<div class="remaining-box' + (can('paiement:write') ? ' clickable' : '') + '"' + (can('paiement:write') ? ' role="button" tabindex="0" data-action="payment-new" title="Encaisser un paiement"' : '') + '>' +
           '<span class="remaining-icon"><i class="fa-solid fa-coins"></i></span>' +
           '<span class="remaining-divider"></span>' +
           '<span class="label">Reste dû</span>' +
@@ -671,7 +930,7 @@
             '<span class="card-title">PEINTURE CASH – Encaissements</span>' +
             '<span class="spacer"></span>' +
             '<select class="select" id="paymentQuote" style="width:185px">' + options + '</select>' +
-            '<button class="btn btn-soft btn-sm" data-action="payment-new"><i class="fa-solid fa-plus"></i> Encaisser</button>' +
+            (can('paiement:write') ? '<button class="btn btn-soft btn-sm" data-action="payment-new"><i class="fa-solid fa-plus"></i> Encaisser</button>' : '') +
           '</div>' +
           '<table class="data">' +
             '<thead><tr><th>Date</th><th>Mode</th><th>Référence</th><th>Montant</th></tr></thead>' +
@@ -714,10 +973,10 @@
             '<select class="select" id="paymentQuote" style="width:185px">' + options + '</select>' +
           '</div>' +
           '<div class="card-body"><div class="timeline">' + timelineMarkup(fin) + '</div>' +
-            '<div style="display:flex;gap:10px;margin-top:18px">' +
+            (can('paiement:write') ? '<div style="display:flex;gap:10px;margin-top:18px">' +
               '<button class="btn btn-primary btn-sm" data-action="financing-advance"><i class="fa-solid fa-paper-plane"></i> Transmettre le dossier</button>' +
               '<button class="btn btn-ghost btn-sm" data-action="payment-new"><i class="fa-solid fa-plus"></i> Encaisser un acompte</button>' +
-            '</div>' +
+            '</div>' : '') +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -781,7 +1040,7 @@
           '<div class="search-field"><i class="fa-solid fa-magnifying-glass"></i>' +
             '<input class="input" id="clientsSearch" type="search" placeholder="Rechercher un client..." value="' + esc(state.clientsSearch) + '"></div>' +
           '<span class="toolbar-label">' + filtered.length + ' client' + (filtered.length > 1 ? 's' : '') + '</span>' +
-          '<button class="btn btn-primary" data-action="client-new"><i class="fa-solid fa-plus"></i> Nouveau client</button>' +
+          (can('clients:write') ? '<button class="btn btn-primary" data-action="client-new"><i class="fa-solid fa-plus"></i> Nouveau client</button>' : '') +
         '</div>' +
         '<div class="client-grid">' + (cards || emptyState('fa-user-group', 'Aucun client trouvé')) + '</div>' +
       '</div>';
@@ -815,8 +1074,10 @@
         '<td>' + badge(p.status, p.status === 'bas' ? 'Stock bas' : p.status === 'moyen' ? 'Moyen' : 'OK') + '</td>' +
         '<td class="right num">' + money(p.value) + '</td>' +
         '<td class="right" style="white-space:nowrap">' +
-          '<button class="btn btn-ghost btn-xs" data-action="stock-adjust" data-id="' + esc(p.id) + '" data-delta="-1" aria-label="Retirer"><i class="fa-solid fa-minus"></i></button> ' +
-          '<button class="btn btn-ghost btn-xs" data-action="stock-adjust" data-id="' + esc(p.id) + '" data-delta="1" aria-label="Ajouter"><i class="fa-solid fa-plus"></i></button>' +
+          (can('stocks:write')
+            ? '<button class="btn btn-ghost btn-xs" data-action="stock-adjust" data-id="' + esc(p.id) + '" data-delta="-1" aria-label="Retirer"><i class="fa-solid fa-minus"></i></button> ' +
+              '<button class="btn btn-ghost btn-xs" data-action="stock-adjust" data-id="' + esc(p.id) + '" data-delta="1" aria-label="Ajouter"><i class="fa-solid fa-plus"></i></button>'
+            : '<span class="muted-dash">—</span>') +
         '</td>' +
       '</tr>'
     )).join('');
@@ -870,7 +1131,7 @@
           '<div class="detail-row"><span class="k">Chef de chantier</span><span class="v">' + esc(c.chef) + '</span></div>' +
           '<div class="detail-row"><span class="k">Équipe</span><span class="v">' + c.team + ' personnes</span></div>' +
         '</div>' +
-        '<button class="btn btn-ghost btn-sm" data-action="chantier-update" data-id="' + esc(c.id) + '"><i class="fa-solid fa-pen-to-square"></i> Mettre à jour</button>' +
+        (can('chantiers:write') ? '<button class="btn btn-ghost btn-sm" data-action="chantier-update" data-id="' + esc(c.id) + '"><i class="fa-solid fa-pen-to-square"></i> Mettre à jour</button>' : '') +
       '</article>'
     )).join('');
 
@@ -885,7 +1146,7 @@
         '<div class="catalogue-toolbar">' +
           '<span class="toolbar-label">' + chantiers.length + ' chantiers suivis</span>' +
           '<span class="spacer" style="flex:1"></span>' +
-          '<button class="btn btn-primary" data-action="chantier-new-open"><i class="fa-solid fa-plus"></i> Nouveau chantier</button>' +
+          (can('chantiers:write') ? '<button class="btn btn-primary" data-action="chantier-new-open"><i class="fa-solid fa-plus"></i> Nouveau chantier</button>' : '') +
         '</div>' +
         '<div class="client-grid">' + (cards || emptyState('fa-helmet-safety', 'Aucun chantier')) + '</div>' +
       '</div>';
@@ -1051,11 +1312,13 @@
       (q.notes ? '<p class="small muted" style="margin-top:12px">' + esc(q.notes) + '</p>' : '') +
     '</div>' +
     '<div class="modal-foot">' +
-      '<select class="select" id="quoteStatus" aria-label="Statut du devis" style="margin-right:auto">' +
-        Object.keys(STATUS_LABEL).map((s) => '<option value="' + s + '"' + (q.status === s ? ' selected' : '') + '>' + STATUS_LABEL[s] + '</option>').join('') +
-      '</select>' +
+      (can('devis:write')
+        ? '<select class="select" id="quoteStatus" aria-label="Statut du devis" style="margin-right:auto">' +
+            Object.keys(STATUS_LABEL).map((s) => '<option value="' + s + '"' + (q.status === s ? ' selected' : '') + '>' + STATUS_LABEL[s] + '</option>').join('') +
+          '</select>'
+        : '<span style="margin-right:auto">' + badge(q.status, STATUS_LABEL[q.status] || q.status) + '</span>') +
       '<button class="btn btn-outline" data-action="quote-pdf" data-id="' + esc(q.id) + '"><i class="fa-solid fa-file-pdf"></i> PDF</button>' +
-      '<button class="btn btn-primary" data-action="quote-pay" data-id="' + esc(q.id) + '"><i class="fa-solid fa-coins"></i> Enregistrer un paiement</button>' +
+      (can('paiement:write') ? '<button class="btn btn-primary" data-action="quote-pay" data-id="' + esc(q.id) + '"><i class="fa-solid fa-coins"></i> Enregistrer un paiement</button>' : '') +
     '</div>';
     openModal(html, { size: 'wide' });
 
@@ -1102,7 +1365,7 @@
       '</div>' +
       '<div class="modal-foot">' +
         '<button class="btn btn-ghost" data-action="modal-close">Fermer</button>' +
-        '<button class="btn btn-primary" data-action="product-use" data-id="' + esc(p.id) + '"><i class="fa-solid fa-plus"></i> Utiliser dans un devis</button>' +
+        (can('devis:write') ? '<button class="btn btn-primary" data-action="product-use" data-id="' + esc(p.id) + '"><i class="fa-solid fa-plus"></i> Utiliser dans un devis</button>' : '') +
       '</div>'
     );
   }
@@ -1145,7 +1408,7 @@
           '<table class="data"><thead><tr><th>Date</th><th>Mode</th><th>Référence</th><th>Montant</th></tr></thead><tbody>' + (payments || '<tr><td colspan="4">' + emptyState('fa-receipt', 'Aucun encaissement') + '</td></tr>') + '</tbody></table>' +
         '</div>' +
         '<div class="modal-foot"><button class="btn btn-ghost" data-action="modal-close">Fermer</button>' +
-        '<button class="btn btn-primary" data-action="finance-pay" data-client="' + esc(c.id) + '"><i class="fa-solid fa-plus"></i> Encaisser un acompte</button></div>',
+        (can('paiement:write') ? '<button class="btn btn-primary" data-action="finance-pay" data-client="' + esc(c.id) + '"><i class="fa-solid fa-plus"></i> Encaisser un acompte</button>' : '') + '</div>',
         { size: 'wide' }
       );
     }).catch((err) => toast(err.message, 'error'));
@@ -1380,6 +1643,7 @@
     },
     'chantier-update'(el) { openChantierUpdate(el.dataset.id); },
     'chantier-new-open'() { openChantierForm(); },
+    'go-home'() { go(firstAllowedRoute()); },
     async 'chantier-save'(el) {
       try {
         await api('/api/chantiers/' + encodeURIComponent(el.dataset.id), {
@@ -1559,9 +1823,19 @@
   };
 
   async function render() {
+    syncSessionUI();
+    if (!state.session) {
+      renderLoginScreen();
+      return;
+    }
     const route = getRoute();
     state.route = route;
     const token = ++state.token;
+    if (!canRoute(route)) {
+      view.innerHTML = accessDenied();
+      setActiveNav(route);
+      return;
+    }
     const renderer = pages[route] || pageNotFound;
     try {
       const html = await renderer();
@@ -1694,8 +1968,13 @@
 
   const userChip = document.getElementById('userChip');
   if (userChip) {
-    userChip.addEventListener('click', () => {
-      toast('Connecté en tant que Commercial');
+    userChip.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleUserMenu();
+    });
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('userMenu');
+      if (menu && !menu.contains(e.target) && !userChip.contains(e.target)) closeUserMenu();
     });
   }
 
@@ -1703,14 +1982,23 @@
 
   /* Démarrage */
   (async function boot() {
-    try {
-      state.company = await api('/api/company');
-      await ensureDraft();
-      state.products = await api('/api/products');
-      state.clients = await api('/api/clients');
-    } catch (err) {
-      console.error(err);
+    state.roles = await api('/api/roles').catch(() => null);
+    state.company = await api('/api/company').catch(() => null);
+    state.session = loadSession();
+    if (state.session) {
+      try {
+        const me = await api('/api/auth/me');
+        persistSession({ token: state.session.token, user: me.user });
+      } catch (err) {
+        persistSession(null);
+      }
     }
+    syncSessionUI();
+    if (!state.session) {
+      renderLoginScreen();
+      return;
+    }
+    await loadData();
     render();
   })();
 })();
