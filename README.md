@@ -33,8 +33,10 @@ démonstration remplit le formulaire et ouvre la session immédiatement.
 - le menu du compte (en haut à droite) affiche le nom, l'email et le rôle, et
   permet de se déconnecter.
 
-Les sessions sont conservées **en mémoire** dans le serveur : un redémarrage
-déconnecte tout le monde (le navigateur revient à l'écran de connexion).
+Les jetons de session sont conservés dans `data/db.json` (7 jours de validité) :
+un redémarrage du serveur ne déconnecte pas les navigateurs déjà ouverts. Quand un
+jeton est malgré tout expiré, l'application revient à l'écran de connexion avec le
+message « Votre session a expiré » au lieu d'afficher une page d'erreur.
 
 ## Comptes de démonstration
 

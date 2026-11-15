@@ -254,7 +254,36 @@ function publicUser(user) {
 }
 
 /* Sessions de démonstration (en mémoire — redémarrer le serveur déconnecte tout le monde) */
+/* Sessions conservées dans db.json : un redémarrage du serveur ne déconnecte plus
+   les navigateurs déjà ouverts (jetons valables 7 jours). */
+const SESSION_TTL = 7 * 86400000;
 const sessions = new Map();
+if (!db.sessions || typeof db.sessions !== 'object') db.sessions = {};
+Object.keys(db.sessions).forEach((token) => {
+  const session = db.sessions[token];
+  if (!session || Date.now() - Number(session.createdAt || 0) > SESSION_TTL) {
+    delete db.sessions[token];
+    return;
+  }
+  sessions.set(token, session);
+});
+
+function createSession(token, userId) {
+  const session = { userId: userId, createdAt: Date.now() };
+  sessions.set(token, session);
+  db.sessions[token] = session;
+  save();
+  return session;
+}
+
+function dropSession(token) {
+  if (!token) return;
+  sessions.delete(token);
+  if (db.sessions && db.sessions[token]) {
+    delete db.sessions[token];
+    save();
+  }
+}
 
 function currentUser(req) {
   const header = String(req.headers.authorization || '');
@@ -652,7 +681,7 @@ app.post('/api/auth/login', (req, res) => {
   user.lastLoginAt = new Date().toISOString();
   save();
   const token = 'demo-' + user.id + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-  sessions.set(token, { userId: user.id, createdAt: Date.now() });
+  createSession(token, user.id);
   res.json({ token, user: publicUser(user) });
 });
 
@@ -710,14 +739,14 @@ app.post('/api/auth/register', (req, res) => {
   db.users.push(user);
   save();
   const token = 'demo-' + user.id + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-  sessions.set(token, { userId: user.id, createdAt: Date.now() });
+  createSession(token, user.id);
   res.status(201).json({ token: token, user: publicUser(user), client: client });
 });
 
 app.post('/api/auth/logout', (req, res) => {
   const header = String(req.headers.authorization || '');
   const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
-  if (token) sessions.delete(token);
+  if (token) dropSession(token);
   res.json({ ok: true });
 });
 

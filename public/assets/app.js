@@ -63,6 +63,7 @@
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
     if (res.status === 401 && !String(path).startsWith('/api/auth/login')) {
+      state.authNotice = 'Votre session a expiré. Reconnectez-vous pour continuer.';
       signOut(true);
       throw new Error('Session expirée, veuillez vous reconnecter');
     }
@@ -335,6 +336,8 @@
           '<img class="auth-logo" src="assets/logo.png" alt="Peinture Pro Guinée">' +
           '<h1>Connexion</h1>' +
           '<p class="auth-sub">Espace de gestion commerciale ou espace client — un seul point d’entrée.</p>' +
+          '<div class="auth-notice" id="authNotice"' + (state.authNotice ? '' : ' hidden') + '>' +
+            '<i class="fa-solid fa-circle-info"></i><span>' + esc(state.authNotice || '') + '</span></div>' +
           '<form id="loginForm" class="auth-form" novalidate>' +
             '<div class="field"><label for="loginEmail">Adresse email</label>' +
               '<input class="input" id="loginEmail" type="email" autocomplete="username" placeholder="prenom@peinturepro.gn"></div>' +
@@ -399,6 +402,7 @@
 
   async function signIn(email, password) {
     const data = await api('/api/auth/login', { method: 'POST', body: { email: email, password: password } });
+    state.authNotice = null;
     persistSession({ token: data.token, user: data.user });
     await loadData();
     const route = getRoute();
@@ -415,6 +419,7 @@
       fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }).catch(() => {});
     }
     state.draft = null;
+    if (!silent) state.authNotice = null;
     closeUserMenu();
     persistSession(null);
     closeModal();
@@ -2908,6 +2913,11 @@
       view.scrollTop = 0;
     } catch (err) {
       if (token !== state.token) return;
+      if (!state.session) {
+        syncSessionUI();
+        renderLoginScreen();
+        return;
+      }
       view.innerHTML = pageHead({ title: 'Une erreur est survenue', sub: err.message }) +
         '<div class="page-body"><div class="card">' + emptyState('fa-triangle-exclamation', err.message) + '</div></div>';
     }
@@ -3116,6 +3126,7 @@
         const me = await api('/api/auth/me');
         persistSession({ token: state.session.token, user: me.user });
       } catch (err) {
+        state.authNotice = 'Votre session a expiré. Reconnectez-vous pour continuer.';
         persistSession(null);
       }
     }

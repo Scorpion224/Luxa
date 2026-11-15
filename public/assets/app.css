@@ -1745,3 +1745,20 @@ tr.row-selected { background: #f7fbf8; }
 .auth-status.warn { color: #b0731a; font-weight: 600; }
 
 .denied-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+.auth-notice {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  text-align: left;
+  background: #fdf6e9;
+  border: 1px solid #f0e2c6;
+  border-radius: 9px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #8a6a3f;
+}
+.auth-notice[hidden] { display: none; }
+.auth-notice i { margin-top: 2px; color: #cf8a1f; }
