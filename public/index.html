@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peinture Pro Guinée — Gestion commerciale</title>
+  <meta name="description" content="Application de gestion commerciale Peinture Pro Guinée : devis, catalogue, stocks, chantiers, finance et parcours de paiement.">
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="stylesheet" href="assets/vendor/fa/all.min.css">
+  <link rel="stylesheet" href="assets/css/app.css?v=20261115-16">
+</head>
+<body>
+  <div class="app">
+    <!-- ==================== BARRE LATÉRALE ==================== -->
+    <aside class="sidebar">
+      <a class="brand" href="#/devis" aria-label="Peinture Pro Guinée — accueil">
+        <img src="assets/logo.png" alt="Peinture Pro Guinée">
+      </a>
+      <div class="sidebar-body">
+        <nav class="nav" aria-label="Navigation principale">
+          <div class="nav-group client-only">Mon espace</div>
+          <button class="nav-item" data-nav="boutique" data-route="boutique">
+            <i class="fa-solid fa-store"></i> Boutique
+          </button>
+          <button class="nav-item" data-nav="panier" data-route="panier">
+            <i class="fa-solid fa-basket-shopping"></i> Mon panier
+          </button>
+          <button class="nav-item" data-nav="ma-peinture" data-route="ma-peinture">
+            <i class="fa-solid fa-house-chimney"></i> Ma peinture
+          </button>
+          <div class="nav-group staff-only">Gestion</div>
+          <button class="nav-item" data-nav="devis" data-route="devis">
+            <i class="fa-solid fa-file-lines"></i> Devis
+          </button>
+          <button class="nav-item" data-nav="catalogue" data-route="catalogue">
+            <i class="fa-solid fa-table-cells-large"></i> Catalogue
+          </button>
+          <button class="nav-item" data-nav="clients" data-route="clients">
+            <i class="fa-solid fa-user-group"></i> Clients
+          </button>
+          <button class="nav-item" data-nav="stocks" data-route="stocks">
+            <i class="fa-solid fa-cube"></i> Stocks
+          </button>
+          <button class="nav-item" data-nav="chantiers" data-route="chantiers">
+            <i class="fa-solid fa-helmet-safety"></i> Chantiers
+          </button>
+          <button class="nav-item" data-nav="finance" data-route="finance">
+            <i class="fa-solid fa-chart-column"></i> Finance
+          </button>
+          <button class="nav-item" data-nav="paiement" data-route="paiement">
+            <i class="fa-solid fa-star"></i> PEINTURE FLEX
+          </button>
+          <button class="nav-item" data-nav="commandes" data-route="commandes">
+            <i class="fa-solid fa-basket-shopping"></i> Commandes
+          </button>
+          <button class="nav-item" data-nav="planning" data-route="planning">
+            <i class="fa-regular fa-calendar-days"></i> Planning
+          </button>
+        </nav>
+        <div class="sidebar-splash" aria-hidden="true"></div>
+      </div>
+    </aside>
+
+    <!-- ==================== CONTENU ==================== -->
+    <div class="main">
+      <header class="topbar">
+        <span class="demo-pill"><i class="fa-solid fa-coins"></i> Données de démonstration</span>
+        <span class="topbar-sep"></span>
+        <button class="user-chip" type="button" id="userChip">
+          <span class="avatar">CM</span>
+          <span>Commercial</span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+      </header>
+      <main class="view" id="view" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <div id="modalRoot"></div>
+  <div id="toasts" role="status" aria-live="polite"></div>
+  <div id="printRoot" class="print-only"></div>
+
+  <script type="module" src="assets/js/main.js?v=20261115-15"></script>
+</body>
+</html>

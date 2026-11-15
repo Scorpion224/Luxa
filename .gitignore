@@ -1,0 +1,12 @@
+node_modules/
+data/db.json
+.DS_Store
+*.log
+npm-debug.log*
+.env
+
+# captures de vérification locales
+captures/
+
+# archive téléchargeable générée localement
+*.zip

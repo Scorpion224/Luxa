@@ -1,0 +1,203 @@
+/* Design system et structure générale (polices, couleurs, gabarit, barre latérale). */
+
+/* ======
+   Peinture Pro Guinée — Design system
+   ========================================================================== */
+
+@font-face { font-family: 'Inter'; src: url('fonts/inter-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Inter'; src: url('fonts/inter-latin-500-normal.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Inter'; src: url('fonts/inter-latin-600-normal.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Inter'; src: url('fonts/inter-latin-700-normal.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Inter'; src: url('fonts/inter-latin-800-normal.woff2') format('woff2'); font-weight: 800; font-style: normal; font-display: swap; }
+
+:root {
+  --bg: #f8f0e6;
+  --bg-deep: #f4ebdf;
+  --panel: #ffffff;
+  --panel-warm: #fdfbf9;
+  --teal: #0c5e62;
+  --teal-hover: #0a4e52;
+  --teal-strong: #0b4f52;
+  --teal-light: #12757a;
+  --mint: #eff5f0;
+  --mint-2: #e7f2ea;
+  --mint-3: #dcebe0;
+  --ink: #0e2e33;
+  --ink-2: #173f43;
+  --body: #44565a;
+  --muted: #78888b;
+  --muted-2: #97a5a6;
+  --line: #ece2d5;
+  --line-soft: #f2ebe1;
+  --orange: #e0801f;
+  --orange-deep: #c96a15;
+  --orange-soft: #fbefdf;
+  --amber: #d69420;
+  --amber-soft: #fcf1d9;
+  --green: #2f8b57;
+  --green-soft: #e4f3e5;
+  --blue: #2b7e9f;
+  --blue-soft: #e7f2f8;
+  --red: #c2492f;
+  --red-soft: #fbeae4;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow-card: 0 1px 2px rgba(15, 46, 51, 0.04);
+  --shadow-pop: 0 18px 48px rgba(12, 45, 48, 0.22);
+  --sidebar-w: clamp(168px, 15.9vw, 250px);
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--body);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; color: var(--ink); }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, h4 { margin: 0; color: var(--ink); letter-spacing: -0.02em; }
+p { margin: 0; }
+ul { margin: 0; padding: 0; list-style: none; }
+
+::selection { background: #cfe6d8; color: #0b3b34; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #d8cbbc; border-radius: 20px; border: 3px solid var(--bg); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ======
+   Structure
+   ========================================================================== */
+.app { display: flex; height: 100vh; overflow: hidden; background: var(--bg); }
+
+.sidebar {
+  width: var(--sidebar-w);
+  flex: 0 0 var(--sidebar-w);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.brand {
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 10px 8px;
+}
+.brand img { width: 128px; height: auto; display: block; }
+
+.sidebar-body {
+  flex: 1;
+  background: var(--teal);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav { padding: 12px 8px 0; display: flex; flex-direction: column; gap: 6px; position: relative; z-index: 2; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #e3efe9;
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 0 12px;
+  height: 40px;
+  border-radius: 8px;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+.nav-item i { width: 17px; font-size: 14px; text-align: center; color: #dcece5; }
+.nav-item:hover { background: rgba(255, 255, 255, 0.09); }
+.nav-item.active { background: var(--mint); color: var(--teal-strong); font-weight: 600; }
+.nav-item.active i { color: var(--teal); }
+
+.sidebar-splash {
+  margin-top: auto;
+  width: 100%;
+  height: 165px;
+  background: url('sidebar-splash.png') left bottom / cover no-repeat;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+.topbar {
+  height: 58px;
+  flex: 0 0 58px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 0 22px;
+}
+
+.demo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid #efe4d4;
+  color: #2f4a3d;
+  font-size: 12px;
+  font-weight: 500;
+}
+.demo-pill i { color: var(--teal); font-size: 11px; }
+
+.topbar-sep { width: 1px; height: 22px; background: #e6d9c8; }
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 4px 2px;
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.user-chip:hover { background: rgba(255, 255, 255, 0.5); }
+.avatar {
+  width: 25px;
+  height: 25px;
+  border-radius: 999px;
+  background: #dcebe2;
+  color: #145c50;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.user-chip .fa-chevron-down { font-size: 9px; color: #6d7d7d; margin-left: 2px; }
+
+.view { flex: 1; overflow-y: auto; overflow-x: hidden; }

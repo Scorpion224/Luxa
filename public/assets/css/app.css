@@ -1,0 +1,17 @@
+/* ==========================================================================
+   Peinture Pro Guinée — feuilles de style
+   --------------------------------------------------------------------------
+   Les styles sont répartis par domaine dans ce dossier. Pour modifier un
+   écran, ouvrez simplement le fichier correspondant.
+   ========================================================================== */
+
+@import './base.css';
+@import './components.css';
+@import './dashboard.css';
+@import './catalogue.css';
+@import './devis.css';
+@import './paiement.css';
+@import './modales.css';
+@import './responsive.css';
+@import './connexion.css';
+@import './espace-client.css';
