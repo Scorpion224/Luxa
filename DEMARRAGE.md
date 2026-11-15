@@ -54,14 +54,14 @@ npm run reset    # supprime data/db.json, régénéré au prochain démarrage
 
 ## Où trouver quoi
 
-| Je veux modifier… | Fichier |
-|---|---|
-| une route de l'API | `server/routes/` |
-| le calcul d'un devis | `server/lib/quotes.js` |
-| les permissions par rôle | `data/roles.js` |
-| une page de l'interface | `public/assets/js/pages/` |
-| un bouton de l'interface | `public/assets/js/core/actions.js` |
-| le style d'un écran | `public/assets/css/` |
-| le jeu de données de démo | `data/seed.js` |
+| Je veux modifier…         | Fichier                            |
+| ------------------------- | ---------------------------------- |
+| une route de l'API        | `server/routes/`                   |
+| le calcul d'un devis      | `server/lib/quotes.js`             |
+| les permissions par rôle  | `data/roles.js`                    |
+| une page de l'interface   | `public/assets/js/pages/`          |
+| un bouton de l'interface  | `public/assets/js/core/actions.js` |
+| le style d'un écran       | `public/assets/css/`               |
+| le jeu de données de démo | `data/seed.js`                     |
 
 Documentation complète : `README.md`, `docs/ARCHITECTURE.md`, `docs/API.md`.

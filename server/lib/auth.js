@@ -3,6 +3,7 @@
  */
 
 const { db, ensureDemoUser, save } = require('../store/database');
+const tokens = require('./tokens');
 const seed = require('../../data/seed');
 const roles = require('../../data/roles');
 
@@ -35,6 +36,10 @@ const SESSION_TTL = 7 * 86400000;
 
 const sessions = new Map();
 
+/* Jetons révoqués (déconnexion) : ils restent refusés même s'ils sont signés. */
+if (!db.revoked || typeof db.revoked !== 'object') db.revoked = {};
+const revoked = new Set(Object.keys(db.revoked));
+
 if (!db.sessions || typeof db.sessions !== 'object') db.sessions = {};
 
 Object.keys(db.sessions).forEach((token) => {
@@ -59,8 +64,11 @@ function dropSession(token) {
   sessions.delete(token);
   if (db.sessions && db.sessions[token]) {
     delete db.sessions[token];
-    save();
   }
+  // un jeton signé reste valable sans la base : on le révoque explicitement
+  revoked.add(token);
+  db.revoked[token] = Date.now() + SESSION_TTL;
+  save();
 }
 
 function readCookie(req, name) {
@@ -75,19 +83,33 @@ function readCookie(req, name) {
   return '';
 }
 
-function setSessionCookie(res, token) {
+/* Un hébergement expose l'application en HTTPS derrière un proxy : le cookie doit
+   alors porter l'attribut Secure, sinon certains navigateurs le rejettent. */
+function isHttps(req) {
+  if (!req) return false;
+  if (req.secure) return true;
+  const proto = String(req.headers['x-forwarded-proto'] || '')
+    .split(',')[0]
+    .trim();
+  return proto === 'https';
+}
+
+function setSessionCookie(req, res, token) {
+  const secure = isHttps(req) ? '; Secure' : '';
   res.setHeader(
     'Set-Cookie',
     'ppg_session=' +
       encodeURIComponent(token) +
       '; Path=/; Max-Age=' +
       Math.floor(SESSION_TTL / 1000) +
-      '; SameSite=Lax; HttpOnly'
+      '; SameSite=Lax; HttpOnly' +
+      secure
   );
 }
 
-function clearSessionCookie(res) {
-  res.setHeader('Set-Cookie', 'ppg_session=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly');
+function clearSessionCookie(req, res) {
+  const secure = isHttps(req) ? '; Secure' : '';
+  res.setHeader('Set-Cookie', 'ppg_session=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly' + secure);
 }
 
 function tokenOf(req) {
@@ -99,9 +121,13 @@ function tokenOf(req) {
 function currentUser(req) {
   const token = tokenOf(req);
   if (!token) return null;
+  if (revoked.has(token)) return null;
   const session = sessions.get(token);
-  if (!session) return null;
-  return db.users.find((u) => u.id === session.userId) || null;
+  if (session) return db.users.find((u) => u.id === session.userId) || null;
+  // jeton signé : vérifiable sans la base (redémarrage, disque éphémère)
+  const payload = tokens.verify(token);
+  if (!payload) return null;
+  return db.users.find((u) => u.id === payload.sub) || null;
 }
 
 function requirePermission(permission) {
@@ -109,11 +135,9 @@ function requirePermission(permission) {
     const user = currentUser(req);
     if (!user) return res.status(401).json({ error: 'Session expirée, veuillez vous reconnecter' });
     if (!roles.can(user.role, permission)) {
-      return res
-        .status(403)
-        .json({
-          error: 'Action non autorisée pour votre rôle (' + (ROLE_LABEL[user.role] || user.role) + ')'
-        });
+      return res.status(403).json({
+        error: 'Action non autorisée pour votre rôle (' + (ROLE_LABEL[user.role] || user.role) + ')'
+      });
     }
     req.user = user;
     next();
@@ -141,7 +165,12 @@ function authenticate(email, password) {
 }
 
 function newToken(user) {
-  return 'demo-' + user.id + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  return tokens.sign({
+    sub: user.id,
+    role: user.role,
+    iat: Date.now(),
+    exp: Date.now() + SESSION_TTL
+  });
 }
 
 function openDemoSession(role) {
@@ -168,5 +197,6 @@ module.exports = {
   requirePermission,
   sessions,
   setSessionCookie,
+  isHttps,
   tokenOf
 };

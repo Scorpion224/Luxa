@@ -5,6 +5,7 @@
 import { syncSessionUI } from '../auth/login.js';
 
 export const state = {
+  demoMode: true,
   company: null,
   session: null,
   roles: null,

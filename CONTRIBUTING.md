@@ -13,13 +13,13 @@ de démonstration.
 
 ## Scripts
 
-| Commande | Rôle |
-|---|---|
-| `npm start` | démarre le serveur |
-| `npm run dev` | démarre avec rechargement automatique |
-| `npm run lint` | analyse ESLint (serveur, données, interface) |
-| `npm run format` | reformate le code avec Prettier |
-| `npm test` | tests automatisés (API + parcours) |
+| Commande         | Rôle                                         |
+| ---------------- | -------------------------------------------- |
+| `npm start`      | démarre le serveur                           |
+| `npm run dev`    | démarre avec rechargement automatique        |
+| `npm run lint`   | analyse ESLint (serveur, données, interface) |
+| `npm run format` | reformate le code avec Prettier              |
+| `npm test`       | tests automatisés (API + parcours)           |
 
 ## Organisation du code
 

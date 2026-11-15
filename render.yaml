@@ -1,0 +1,22 @@
+# Déploiement Render (https://render.com) — un clic depuis le dépôt GitHub.
+services:
+  - type: web
+    name: peinture-pro-guinee
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # secret fixe : les sessions survivent aux redéploiements
+      - key: SESSION_SECRET
+        generateValue: true
+      # disque persistant pour conserver data/db.json
+      - key: DB_FILE
+        value: /var/data/db.json
+    disk:
+      name: donnees
+      mountPath: /var/data
+      sizeGB: 1

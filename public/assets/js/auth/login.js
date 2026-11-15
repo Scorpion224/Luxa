@@ -167,12 +167,14 @@ export function renderLoginScreen() {
     ' · vérification du serveur…</p>' +
     '<p class="auth-reset"><button type="button" class="link-btn" data-action="hard-reset">' +
     '<i class="fa-solid fa-rotate-right"></i> Un souci pour vous connecter ? Recharger l’application</button></p>' +
-    '<div class="auth-demo">' +
-    '<div class="auth-demo-title">Comptes de démonstration</div>' +
-    '<div class="auth-demo-list">' +
-    demoButtons +
-    '</div>' +
-    '</div>' +
+    (state.demoMode === false
+      ? '<p class="auth-status warn">Connexion de démonstration désactivée sur ce déploiement : utilisez votre adresse email et votre mot de passe.</p>'
+      : '<div class="auth-demo">' +
+        '<div class="auth-demo-title">Comptes de démonstration</div>' +
+        '<div class="auth-demo-list">' +
+        demoButtons +
+        '</div>' +
+        '</div>') +
     '<details class="auth-debug"><summary>Journal de connexion</summary>' +
     '<pre id="authLog">aucun échange avec le serveur pour le moment</pre></details>' +
     '</div>' +

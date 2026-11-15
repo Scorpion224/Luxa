@@ -13,4 +13,9 @@ const DB_FILE = process.env.DB_FILE || path.join(__dirname, '..', 'data', 'db.js
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
-module.exports = { PORT, APP_VERSION, DB_FILE, PUBLIC_DIR };
+/* DEMO_MODE=false désactive les connexions de démonstration (déploiement réel) :
+   les routes /demo/... et /api/auth/demo sont alors fermées et l'interface
+   n'ouvre plus de session automatiquement. */
+const DEMO_MODE = String(process.env.DEMO_MODE || 'true').toLowerCase() !== 'false';
+
+module.exports = { PORT, APP_VERSION, DB_FILE, PUBLIC_DIR, DEMO_MODE };

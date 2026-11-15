@@ -24,13 +24,13 @@ Pour repartir du jeu de démonstration : `npm run reset` (ou supprimer `data/db.
 L'application ouvre directement l'espace de démonstration ; l'écran de connexion
 reste accessible par le bouton « Se déconnecter » ou l'adresse `/?connexion=1`.
 
-| Espace | Adresse de connexion directe | Email | Mot de passe |
-|---|---|---|---|
-| Administrateur | `/demo/admin` | admin@peinturepro.gn | `admin123` |
-| Commercial | `/demo/commercial` | commercial@peinturepro.gn | `com123` |
-| Comptable | `/demo/comptable` | comptable@peinturepro.gn | `compta123` |
-| Stockiste | `/demo/stockiste` | stock@peinturepro.gn | `stock123` |
-| Client | `/demo/client` | client@peinturepro.gn | `client123` |
+| Espace         | Adresse de connexion directe | Email                     | Mot de passe |
+| -------------- | ---------------------------- | ------------------------- | ------------ |
+| Administrateur | `/demo/admin`                | admin@peinturepro.gn      | `admin123`   |
+| Commercial     | `/demo/commercial`           | commercial@peinturepro.gn | `com123`     |
+| Comptable      | `/demo/comptable`            | comptable@peinturepro.gn  | `compta123`  |
+| Stockiste      | `/demo/stockiste`            | stock@peinturepro.gn      | `stock123`   |
+| Client         | `/demo/client`               | client@peinturepro.gn     | `client123`  |
 
 Les sessions sont conservées 7 jours (jeton en `localStorage` **et** cookie
 `HttpOnly` `ppg_session`), y compris après un redémarrage du serveur.
@@ -63,18 +63,18 @@ docs/          architecture et référence de l'API
 ```
 
 Détails : [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/API.md](docs/API.md) ·
-[CONTRIBUTING.md](CONTRIBUTING.md).
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) · [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Scripts
 
-| Commande | Rôle |
-|---|---|
-| `npm start` | démarre le serveur |
-| `npm run dev` | démarre avec rechargement automatique |
-| `npm run lint` | ESLint sur le serveur, les données, l'interface et les tests |
-| `npm run format` | Prettier sur le code et la documentation |
-| `npm test` | tests automatisés de l'API (base temporaire, port dédié) |
-| `npm run reset` | réinitialise `data/db.json` |
+| Commande         | Rôle                                                         |
+| ---------------- | ------------------------------------------------------------ |
+| `npm start`      | démarre le serveur                                           |
+| `npm run dev`    | démarre avec rechargement automatique                        |
+| `npm run lint`   | ESLint sur le serveur, les données, l'interface et les tests |
+| `npm run format` | Prettier sur le code et la documentation                     |
+| `npm test`       | tests automatisés de l'API (base temporaire, port dédié)     |
+| `npm run reset`  | réinitialise `data/db.json`                                  |
 
 ## Visual Studio Code
 
@@ -84,7 +84,11 @@ formatage et corrections ESLint à l'enregistrement, tâches `Serveur API`, `Lin
 
 ## Configuration
 
-| Variable | Défaut | Rôle |
-|---|---|---|
-| `PORT` | `3000` | port d'écoute |
-| `DB_FILE` | `data/db.json` | chemin de la base locale (utilisé par les tests) |
+| Variable         | Défaut         | Rôle                                                                                                                                    |
+| ---------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`           | `3000`         | port d'écoute                                                                                                                           |
+| `DB_FILE`        | `data/db.json` | chemin de la base locale (volume persistant en production)                                                                              |
+| `SESSION_SECRET` | généré         | secret de signature des jetons de session (≥ 16 caractères). Fixez-le en production : les connexions survivent alors aux redéploiements |
+| `DEMO_MODE`      | `true`         | `false` ferme les connexions de démonstration et l'ouverture automatique de session                                                     |
+
+Déploiement : voir [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) (Render, Docker, VPS, diagnostic).

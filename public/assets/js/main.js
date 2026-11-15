@@ -73,6 +73,7 @@ window.addEventListener('hashchange', () => {
   // aligne le client sur la version du serveur : évite une interface périmée restée en cache
   try {
     const health = await api('/api/health');
+    state.demoMode = health.demoMode !== false;
     if (String(health.version || '').indexOf(APP_VERSION) !== 0) {
       if (!sessionStorage.getItem('ppg.build')) {
         sessionStorage.setItem('ppg.build', '1');
@@ -177,7 +178,7 @@ window.addEventListener('hashchange', () => {
     try {
       forceLogin = new URLSearchParams(location.search).get('connexion') === '1';
     } catch (err) {}
-    if (!voluntaryLogout && !forceLogin) {
+    if (!voluntaryLogout && !forceLogin && state.demoMode !== false) {
       const role = loadDemoRole() || 'admin';
       try {
         const data = await api('/api/auth/demo', { method: 'POST', body: { role: role } });
