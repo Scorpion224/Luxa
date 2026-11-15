@@ -674,6 +674,41 @@ const CHANTIERS = [
   }
 ];
 
+const USERS = [
+  {
+    id: 'u1',
+    name: 'Mamadou Djoulde Barry',
+    email: 'admin@peinturepro.gn',
+    password: 'admin123', // en clair uniquement pour la démo
+    role: 'admin',
+    phone: '+224 622 00 00 01'
+  },
+  {
+    id: 'u2',
+    name: 'Seykou Yaya Barry',
+    email: 'commercial@peinturepro.gn',
+    password: 'com123',
+    role: 'commercial',
+    phone: '+224 622 00 00 02'
+  },
+  {
+    id: 'u3',
+    name: 'Fatou Comptable',
+    email: 'comptable@peinturepro.gn',
+    password: 'compta123',
+    role: 'comptable',
+    phone: '+224 622 00 00 03'
+  },
+  {
+    id: 'u4',
+    name: 'Ibrahima Stock',
+    email: 'stock@peinturepro.gn',
+    password: 'stock123',
+    role: 'stockiste',
+    phone: '+224 622 00 00 04'
+  }
+];
+
 const DRAFT_QUOTE = {
   id: 'BROUILLON',
   clientId: 'c3',
@@ -707,6 +742,6 @@ const DRAFT_QUOTE = {
 };
 
 module.exports = {
-  COMPANY, PRODUCTS, CLIENTS, QUOTES, PAYMENTS, CHANTIERS, DRAFT_QUOTE,
+  COMPANY, USERS, PRODUCTS, CLIENTS, QUOTES, PAYMENTS, CHANTIERS, DRAFT_QUOTE,
   buildQuoteLines, defaultSchedule
 };

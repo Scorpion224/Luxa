@@ -23,6 +23,7 @@ app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
 function seedDatabase() {
   return {
     company: seed.COMPANY,
+    users: seed.USERS,
     products: seed.PRODUCTS,
     clients: seed.CLIENTS,
     quotes: seed.QUOTES,
@@ -39,6 +40,8 @@ try {
 } catch (err) {
   db = seedDatabase();
 }
+// migration douce : une base créée avant l'arrivée des comptes utilisateurs
+if (!Array.isArray(db.users)) db.users = seed.USERS;
 
 function save() {
   try {
@@ -167,6 +170,64 @@ function buildLinesFromCalculation(calc, finish) {
 app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '2.0.0' }));
 
 app.get('/api/company', (req, res) => res.json(db.company));
+
+/* ------------------------------------------------------------------ */
+/* Utilisateurs & authentification (démonstration)                     */
+/* ------------------------------------------------------------------ */
+const ROLE_LABEL = {
+  admin: 'Administrateur',
+  commercial: 'Commercial',
+  comptable: 'Comptable',
+  stockiste: 'Stockiste'
+};
+
+// Le mot de passe ne sort jamais de l'API
+function publicUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    roleLabel: ROLE_LABEL[user.role] || user.role,
+    phone: user.phone || '',
+    initials: (user.name || '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0].toUpperCase())
+      .join('')
+  };
+}
+
+app.get('/api/users', (req, res) => {
+  const role = String(req.query.role || '').toLowerCase();
+  const list = db.users.filter((u) => !role || u.role === role);
+  res.json(list.map(publicUser));
+});
+
+app.get('/api/users/:id', (req, res) => {
+  const user = db.users.find((u) => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
+  res.json(publicUser(user));
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+  const password = String((req.body && req.body.password) || '');
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email et mot de passe requis' });
+  }
+  const user = db.users.find((u) => u.email.toLowerCase() === email && u.password === password);
+  if (!user) {
+    return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+  }
+  user.lastLoginAt = new Date().toISOString();
+  save();
+  res.json({
+    token: 'demo-' + user.id + '-' + Date.now(),
+    user: publicUser(user)
+  });
+});
 
 app.get('/api/categories', (req, res) => {
   const fixed = ['FOM intérieurs', 'FOM extérieurs', 'Mastiques pour murs', 'Peintures à huile', 'Accessoires et consommables'];

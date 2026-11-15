@@ -19,6 +19,18 @@ npm run dev      # idem avec rechargement du serveur
 Pour repartir des données de démonstration : supprimer `data/db.json` puis relancer.
 Le jeu de démonstration est régénéré automatiquement par `data/seed.js`.
 
+## Comptes de démonstration
+
+| Rôle | Email | Mot de passe |
+| --- | --- | --- |
+| Administrateur | `admin@peinturepro.gn` | `admin123` |
+| Commercial | `commercial@peinturepro.gn` | `com123` |
+| Comptable | `comptable@peinturepro.gn` | `compta123` |
+| Stockiste | `stock@peinturepro.gn` | `stock123` |
+
+Les mots de passe sont stockés **en clair** et le jeton renvoyé par `/api/auth/login`
+est un jeton de démonstration : ce dispositif n'est pas prévu pour la production.
+
 ## Écrans
 
 | Écran | Route | Contenu |
@@ -55,6 +67,8 @@ TVA 338 000 ; **total 6 420 000 GNF**.
 | Méthode | Route | Rôle |
 | --- | --- | --- |
 | GET | `/api/health` | État du service |
+| GET | `/api/users` · `/api/users/:id` | Comptes utilisateurs (filtre `?role=`) |
+| POST | `/api/auth/login` | Connexion `{ email, password }` → jeton de démo + profil |
 | GET | `/api/company` | Société (nom, TVA, adresse) |
 | GET | `/api/categories` · `/api/products` | Catalogue (filtres `?category=`, `?q=`) |
 | GET/PATCH | `/api/products/:id/stock` | Ajustement de stock |
