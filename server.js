@@ -13,12 +13,20 @@ const portal = require('./data/portal');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const APP_VERSION = '3.0 (espace client)';
 const DB_FILE = path.join(__dirname, 'data', 'db.json');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
-app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
+app.use(express.static(PUBLIC_DIR, {
+  extensions: ['html'],
+  setHeaders(res, filePath) {
+    // évite qu'un ancien app.js / app.css reste en cache après une mise à jour
+    if (/\.(?:js|css|html)$/.test(filePath)) res.setHeader('Cache-Control', 'no-store');
+    else res.setHeader('Cache-Control', 'public, max-age=3600');
+  }
+}));
 
 /* ------------------------------------------------------------------ */
 /* Base de données locale                                              */
@@ -56,6 +64,34 @@ if (!Array.isArray(db.bookings)) db.bookings = seed.PORTAL_BOOKINGS;
 if (!db.counters) db.counters = { quote: 32, payment: 15, client: 9, chantier: 8, order: 5, booking: 2 };
 if (!db.counters.order) db.counters.order = 5;
 if (!db.counters.booking) db.counters.booking = 2;
+
+/* Comptes de démonstration : une base créée avant l'espace client ne contient pas
+   les comptes « client » — on les ajoute (sans doublon) au démarrage. */
+function ensureDemoAccounts() {
+  const added = [];
+  seed.USERS.forEach((u) => {
+    const exists = db.users.some((x) => String(x.email || '').toLowerCase() === String(u.email).toLowerCase());
+    if (!exists) {
+      db.users.push(JSON.parse(JSON.stringify(u)));
+      added.push(u.email);
+    }
+  });
+  db.users.forEach((u) => {
+    const demo = seed.USERS.find((x) => String(x.email).toLowerCase() === String(u.email || '').toLowerCase());
+    if (!demo || demo.role !== 'client') return;
+    const attached = u.clientId && db.clients.some((c) => c.id === u.clientId);
+    if (!attached) {
+      const target = db.clients.find((c) => c.id === demo.clientId) ||
+        db.clients.find((c) => String(c.email || '').toLowerCase() === String(u.email).toLowerCase());
+      if (target) u.clientId = target.id;
+    }
+  });
+  return added;
+}
+const demoAdded = ensureDemoAccounts();
+if (demoAdded.length) {
+  console.log('  Migration : comptes de démonstration ajoutés → ' + demoAdded.join(', '));
+}
 
 function save() {
   try {
@@ -181,7 +217,14 @@ function buildLinesFromCalculation(calc, finish) {
 /* ------------------------------------------------------------------ */
 /* API — Référentiel                                                   */
 /* ------------------------------------------------------------------ */
-app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '2.0.0' }));
+app.get('/api/health', (req, res) => res.json({
+  status: 'ok',
+  version: APP_VERSION,
+  users: Array.isArray(db.users) ? db.users.length : 0,
+  clients: Array.isArray(db.clients) ? db.clients.length : 0,
+  demoAccounts: ['admin@peinturepro.gn', 'commercial@peinturepro.gn', 'comptable@peinturepro.gn', 'stock@peinturepro.gn', 'client@peinturepro.gn', 'mariama@peinturepro.gn']
+    .map((email) => ({ email: email, exists: db.users.some((u) => String(u.email || '').toLowerCase() === email) }))
+}));
 
 app.get('/api/company', (req, res) => res.json(db.company));
 
@@ -596,10 +639,16 @@ app.post('/api/auth/login', (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ error: 'Email et mot de passe requis' });
   }
-  const user = db.users.find((u) => u.email.toLowerCase() === email && u.password === password);
-  if (!user) {
-    return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+  const known = db.users.find((u) => String(u.email || '').toLowerCase() === email);
+  if (!known) {
+    return res.status(401).json({
+      error: 'Aucun compte pour cette adresse email. Utilisez un compte de démonstration ci-dessous ou créez un compte client.'
+    });
   }
+  if (String(known.password) !== password) {
+    return res.status(401).json({ error: 'Mot de passe incorrect pour ' + known.email });
+  }
+  const user = known;
   user.lastLoginAt = new Date().toISOString();
   save();
   const token = 'demo-' + user.id + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);

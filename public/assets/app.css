@@ -1734,3 +1734,14 @@ tr.row-selected { background: #f7fbf8; }
 .user-menu-item.client-preview { color: #0c5e62; white-space: nowrap; }
 .user-menu-item.client-preview:hover { background: #eff5f0; }
 .user-menu-item.client-preview .demo-tag { margin-left: auto; }
+
+.auth-status {
+  margin: 14px 0 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  text-align: center;
+  color: #9aa8a6;
+}
+.auth-status.warn { color: #b0731a; font-weight: 600; }
+
+.denied-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }

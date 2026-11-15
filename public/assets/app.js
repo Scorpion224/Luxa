@@ -54,7 +54,12 @@
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(opts.body);
     }
-    const res = await fetch(path, opts);
+    let res;
+    try {
+      res = await fetch(path, opts);
+    } catch (err) {
+      throw new Error('Serveur injoignable — vérifiez que l’application est démarrée (npm start)');
+    }
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
     if (res.status === 401 && !String(path).startsWith('/api/auth/login')) {
@@ -125,6 +130,7 @@
   /* Session, rôles & permissions                                        */
   /* ---------------------------------------------------------------------- */
   const SESSION_KEY = 'ppg.session';
+  const APP_VERSION = '3.0';
   const MODULE_PERMISSION = {
     devis: 'devis:read',
     catalogue: 'catalogue:read',
@@ -283,8 +289,13 @@
         '<h2>Accès restreint</h2>' +
         '<p>Le rôle « ' + esc(roleLabel) + ' » n’a pas les droits nécessaires pour consulter cette page. ' +
           'Connectez-vous avec un autre compte pour y accéder.</p>' +
+        '<div class="denied-actions">' +
+        (user && user.role === 'admin' && CLIENT_MODULES.indexOf(ROUTE_MODULE[state.route] || '') !== -1
+          ? '<button class="btn btn-primary" data-action="preview-client">' +
+            '<i class="fa-solid fa-store"></i> Ouvrir l’espace client <span class="demo-tag">Démo</span></button>'
+          : '') +
         '<button class="btn btn-primary" data-action="go-home">' +
-          '<i class="fa-solid fa-arrow-left"></i> Retour à l’accueil</button>' +
+          '<i class="fa-solid fa-arrow-left"></i> Retour à l’accueil</button></div>' +
       '</div></div></div>';
   }
 
@@ -334,6 +345,7 @@
           '</form>' +
           '<p class="auth-switch">Pas encore de compte ? ' +
             '<button type="button" class="link-btn" data-action="open-register">Créer mon compte client</button></p>' +
+          '<p class="auth-status" id="authStatus">Version ' + APP_VERSION + ' · vérification du serveur…</p>' +
           '<div class="auth-demo">' +
             '<div class="auth-demo-title">Comptes de démonstration</div>' +
             '<div class="auth-demo-list">' + demoButtons + '</div>' +
@@ -356,6 +368,24 @@
       errorBox.hidden = true;
       signIn(email, password).catch((err) => showError(err.message));
     });
+
+    const status = document.getElementById('authStatus');
+    if (status) {
+      fetch('/api/health')
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('http ' + r.status))))
+        .then((health) => {
+          const missing = (health.demoAccounts || []).filter((a) => !a.exists);
+          const versionOk = String(health.version || '').indexOf(APP_VERSION) === 0;
+          status.textContent = 'Version ' + APP_VERSION + ' · serveur connecté' +
+            (versionOk ? '' : ' — version serveur ' + (health.version || 'inconnue') + ' : rechargez la page (Ctrl+Shift+R)') +
+            (missing.length ? ' · comptes manquants : ' + missing.map((a) => a.email).join(', ') : '');
+          status.classList.toggle('warn', !versionOk || missing.length > 0);
+        })
+        .catch(() => {
+          status.textContent = 'Serveur injoignable — démarrez l’application (npm start) puis rechargez la page';
+          status.classList.add('warn');
+        });
+    }
 
     view.querySelectorAll('[data-demo-email]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -3064,6 +3094,20 @@
 
   /* Démarrage */
   (async function boot() {
+    // aligne le client sur la version du serveur : évite une interface périmée restée en cache
+    try {
+      const health = await api('/api/health');
+      if (String(health.version || '').indexOf(APP_VERSION) !== 0) {
+        if (!sessionStorage.getItem('ppg.build')) {
+          sessionStorage.setItem('ppg.build', '1');
+          location.reload();
+          return;
+        }
+      } else {
+        sessionStorage.removeItem('ppg.build');
+      }
+    } catch (err) { /* serveur indisponible : l'écran de connexion affichera le détail */ }
+
     state.roles = await api('/api/roles').catch(() => null);
     state.company = await api('/api/company').catch(() => null);
     state.session = loadSession();
