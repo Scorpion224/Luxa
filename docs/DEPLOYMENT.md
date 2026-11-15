@@ -25,6 +25,12 @@ Il n'y a **pas** d'étape de compilation : le dossier `public/` est envoyé tel 
    fourni configure le service, le secret et le disque persistant.
 3. Ouvrir l'URL fournie : l'application doit afficher l'espace Administrateur.
 
+Le plan gratuit de Render n'autorise pas les disques persistants : les données
+saisies sont donc perdues à chaque redéploiement (les **sessions**, elles,
+survivent). Pour conserver les données, passez le service en plan payant, montez
+un disque sur `/var/data` et définissez `DB_FILE=/var/data/db.json` — le
+`render.yaml` contient les lignes à décommenter.
+
 Sans Blueprint : **New → Web Service**, _Build_ `npm ci --omit=dev`,
 _Start_ `node server.js`, _Health check_ `/api/health`.
 

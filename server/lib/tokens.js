@@ -25,6 +25,12 @@ function fromBase64url(value) {
    fois puis conservé dans la base pour survivre aux redémarrages. */
 function resolveSecret() {
   const fromEnv = String(process.env.SESSION_SECRET || '').trim();
+  if (fromEnv && fromEnv.length < 16) {
+    console.warn(
+      '  SESSION_SECRET est trop court (16 caractères minimum) : il est ignoré.\n' +
+        '  Les sessions risquent d’être perdues à chaque redéploiement.'
+    );
+  }
   if (fromEnv.length >= 16) return { secret: fromEnv, source: 'SESSION_SECRET' };
   if (typeof db.secret === 'string' && db.secret.length >= 32) {
     return { secret: db.secret, source: 'base locale' };

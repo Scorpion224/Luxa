@@ -1,9 +1,17 @@
 # Déploiement Render (https://render.com) — un clic depuis le dépôt GitHub.
+#
+# Cette configuration utilise le plan gratuit : pas de disque persistant, donc
+# les données créées sont perdues à chaque redéploiement. Les sessions, elles,
+# survivent grâce au jeton signé et à SESSION_SECRET.
+#
+# Pour conserver les données, passez en plan payant et décommentez le bloc
+# `disk` puis la variable DB_FILE ci-dessous (un disque exige un plan payant).
 services:
   - type: web
     name: peinture-pro-guinee
     runtime: node
     plan: free
+    region: frankfurt
     buildCommand: npm ci --omit=dev
     startCommand: node server.js
     healthCheckPath: /api/health
@@ -13,10 +21,9 @@ services:
       # secret fixe : les sessions survivent aux redéploiements
       - key: SESSION_SECRET
         generateValue: true
-      # disque persistant pour conserver data/db.json
-      - key: DB_FILE
-        value: /var/data/db.json
-    disk:
-      name: donnees
-      mountPath: /var/data
-      sizeGB: 1
+      # - key: DB_FILE
+      #   value: /var/data/db.json
+    # disk:
+    #   name: donnees
+    #   mountPath: /var/data
+    #   sizeGB: 1

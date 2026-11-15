@@ -36,9 +36,14 @@ const SESSION_TTL = 7 * 86400000;
 
 const sessions = new Map();
 
-/* Jetons révoqués (déconnexion) : ils restent refusés même s'ils sont signés. */
+/* Jetons révoqués (déconnexion) : ils restent refusés même s'ils sont signés.
+   Les entrées expirées sont oubliées au démarrage pour ne pas faire grossir la base. */
 if (!db.revoked || typeof db.revoked !== 'object') db.revoked = {};
-const revoked = new Set(Object.keys(db.revoked));
+const revoked = new Set();
+Object.keys(db.revoked).forEach((token) => {
+  if (Number(db.revoked[token]) > Date.now()) revoked.add(token);
+  else delete db.revoked[token];
+});
 
 if (!db.sessions || typeof db.sessions !== 'object') db.sessions = {};
 

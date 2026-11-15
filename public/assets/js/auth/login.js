@@ -326,6 +326,14 @@ export async function afterSignIn(data) {
     sessionStorage.removeItem('ppg.loggedOut');
   } catch (err) {}
   persistSession({ token: data.token, user: data.user });
+  // la connexion réussie ne laisse pas ?connexion=1 dans l'adresse
+  try {
+    const url = new URL(location.href);
+    if (url.searchParams.has('connexion')) {
+      url.searchParams.delete('connexion');
+      history.replaceState(null, '', url.pathname + (url.search || '') + url.hash);
+    }
+  } catch (err) {}
   await loadData();
   const route = getRoute();
   const target = canRoute(route) ? route : firstAllowedRoute();

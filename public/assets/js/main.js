@@ -165,6 +165,19 @@ window.addEventListener('hashchange', () => {
     persistSession(null);
   }
   syncSessionUI();
+  // Écran de connexion demandé explicitement (?connexion=1) : on l'affiche même
+  // si une session est déjà ouverte, pour pouvoir changer de compte.
+  let forceLogin = false;
+  try {
+    forceLogin = new URLSearchParams(location.search).get('connexion') === '1';
+  } catch (err) {}
+  if (forceLogin) {
+    // même présentation que lors d'un premier chargement : sans barre latérale
+    document.body.classList.add('auth-mode');
+    renderLoginScreen();
+    return;
+  }
+
   // Accès direct : si aucune session valide n'a pu être restaurée, on ouvre
   // automatiquement l'espace de démonstration (dernier utilisé, sinon administrateur).
   // L'écran de connexion ne s'affiche plus que si l'utilisateur s'est déconnecté
@@ -173,10 +186,6 @@ window.addEventListener('hashchange', () => {
     let voluntaryLogout = false;
     try {
       voluntaryLogout = sessionStorage.getItem('ppg.loggedOut') === '1';
-    } catch (err) {}
-    let forceLogin = false;
-    try {
-      forceLogin = new URLSearchParams(location.search).get('connexion') === '1';
     } catch (err) {}
     if (!voluntaryLogout && !forceLogin && state.demoMode !== false) {
       const role = loadDemoRole() || 'admin';
