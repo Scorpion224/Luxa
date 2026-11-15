@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "lint": "eslint server data public/assets/js tests server.js",
+    "lint": "eslint server data public/assets/js tests scripts server.js",
     "lint:fix": "npm run lint -- --fix",
     "format": "prettier --write \"server/**/*.js\" \"data/**/*.js\" \"public/assets/js/**/*.js\" \"public/assets/css/**/*.css\" \"*.md\" \"docs/*.md\"",
     "format:check": "prettier --check \"server/**/*.js\" \"public/assets/js/**/*.js\"",

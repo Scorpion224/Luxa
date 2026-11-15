@@ -29,7 +29,7 @@ export default [
     }
   },
   {
-    files: ['tests/**/*.mjs', 'eslint.config.mjs'],
+    files: ['tests/**/*.mjs', 'scripts/**/*.mjs', 'eslint.config.mjs'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
