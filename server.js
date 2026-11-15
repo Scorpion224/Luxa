@@ -93,6 +93,24 @@ if (demoAdded.length) {
   console.log('  Migration : comptes de démonstration ajoutés → ' + demoAdded.join(', '));
 }
 
+/* Garantit qu'un compte de démonstration existe et correspond au seed
+   (email, mot de passe, rôle, fiche client). Répare au passage une base abîmée. */
+function ensureDemoUser(demo) {
+  let user = db.users.find((u) => String(u.email || '').toLowerCase() === String(demo.email).toLowerCase());
+  if (!user) {
+    user = JSON.parse(JSON.stringify(demo));
+    db.users.push(user);
+  }
+  user.role = demo.role;
+  user.password = demo.password;
+  if (demo.clientId) {
+    const client = db.clients.find((c) => c.id === demo.clientId);
+    if (client) user.clientId = client.id;
+  }
+  save();
+  return user;
+}
+
 function save() {
   try {
     fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
@@ -285,9 +303,35 @@ function dropSession(token) {
   }
 }
 
-function currentUser(req) {
+function readCookie(req, name) {
+  const raw = String(req.headers.cookie || '');
+  const parts = raw.split(';');
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const sep = part.indexOf('=');
+    if (sep === -1) continue;
+    if (part.slice(0, sep).trim() === name) return decodeURIComponent(part.slice(sep + 1).trim());
+  }
+  return '';
+}
+
+function setSessionCookie(res, token) {
+  res.setHeader('Set-Cookie', 'ppg_session=' + encodeURIComponent(token) +
+    '; Path=/; Max-Age=' + Math.floor(SESSION_TTL / 1000) + '; SameSite=Lax; HttpOnly');
+}
+
+function clearSessionCookie(res) {
+  res.setHeader('Set-Cookie', 'ppg_session=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly');
+}
+
+function tokenOf(req) {
   const header = String(req.headers.authorization || '');
-  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  const bearer = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  return bearer || readCookie(req, 'ppg_session');
+}
+
+function currentUser(req) {
+  const token = tokenOf(req);
   if (!token) return null;
   const session = sessions.get(token);
   if (!session) return null;
@@ -668,7 +712,12 @@ app.post('/api/auth/login', (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ error: 'Email et mot de passe requis' });
   }
-  const known = db.users.find((u) => String(u.email || '').toLowerCase() === email);
+  const demoAccount = seed.USERS.find((u) => String(u.email).toLowerCase() === email);
+  let known = db.users.find((u) => String(u.email || '').toLowerCase() === email);
+  // base ancienne ou modifiée : on restaure le compte de démonstration
+  if (demoAccount && (!known || String(demoAccount.password) === password)) {
+    known = ensureDemoUser(demoAccount);
+  }
   if (!known) {
     return res.status(401).json({
       error: 'Aucun compte pour cette adresse email. Utilisez un compte de démonstration ci-dessous ou créez un compte client.'
@@ -682,6 +731,19 @@ app.post('/api/auth/login', (req, res) => {
   save();
   const token = 'demo-' + user.id + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
   createSession(token, user.id);
+  setSessionCookie(res, token);
+  res.json({ token, user: publicUser(user) });
+});
+
+/* Connexion de démonstration en un clic : ne peut pas échouer (le compte est créé/réparé) */
+app.post('/api/auth/demo', (req, res) => {
+  const role = String((req.body && req.body.role) || '').toLowerCase();
+  const demo = seed.USERS.find((u) => u.role === role);
+  if (!demo) return res.status(400).json({ error: 'Rôle de démonstration inconnu : ' + (role || '(vide)') });
+  const user = ensureDemoUser(demo);
+  const token = 'demo-' + user.id + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  createSession(token, user.id);
+  setSessionCookie(res, token);
   res.json({ token, user: publicUser(user) });
 });
 
@@ -745,15 +807,16 @@ app.post('/api/auth/register', (req, res) => {
 
 app.post('/api/auth/logout', (req, res) => {
   const header = String(req.headers.authorization || '');
-  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : readCookie(req, 'ppg_session');
   if (token) dropSession(token);
+  clearSessionCookie(res);
   res.json({ ok: true });
 });
 
 app.get('/api/auth/me', (req, res) => {
   const user = currentUser(req);
   if (!user) return res.status(401).json({ error: 'Session expirée' });
-  res.json({ user: publicUser(user) });
+  res.json({ token: tokenOf(req), user: publicUser(user) });
 });
 
 app.get('/api/categories', (req, res) => {
@@ -1428,6 +1491,12 @@ app.get('/api/finance', requirePermission('finance:read'), (req, res) => {
 /* ------------------------------------------------------------------ */
 app.use((req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+});
+
+app.use((err, req, res, next) => {
+  console.error('Erreur serveur :', err && err.message);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: 'Erreur serveur : ' + ((err && err.message) || 'inconnue') });
 });
 
 app.listen(PORT, () => {

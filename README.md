@@ -22,7 +22,9 @@ Le jeu de démonstration est régénéré automatiquement par `data/seed.js`.
 ## Connexion
 
 L'application démarre sur un écran de connexion. Un clic sur un compte de
-démonstration remplit le formulaire et ouvre la session immédiatement.
+démonstration ouvre la session immédiatement (`POST /api/auth/demo { role }`) :
+le compte est créé ou réparé à la volée, la connexion ne peut donc pas échouer.
+L'écran affiche sa version et l'état du serveur (« Version 3.0 · serveur connecté »).
 
 - l'utilisateur est stocké côté navigateur (`localStorage`, clé `ppg.session`) ;
 - chaque appel d'API envoie `Authorization: Bearer <token>` ;
@@ -33,8 +35,10 @@ démonstration remplit le formulaire et ouvre la session immédiatement.
 - le menu du compte (en haut à droite) affiche le nom, l'email et le rôle, et
   permet de se déconnecter.
 
-Les jetons de session sont conservés dans `data/db.json` (7 jours de validité) :
-un redémarrage du serveur ne déconnecte pas les navigateurs déjà ouverts. Quand un
+Les jetons de session sont conservés dans `data/db.json` (7 jours de validité) et
+posés en cookie `HttpOnly` (`ppg_session`), ce qui permet de restaurer la session
+même si le stockage du navigateur est bloqué. Un redémarrage du serveur ne
+déconnecte donc pas les navigateurs déjà ouverts. Quand un
 jeton est malgré tout expiré, l'application revient à l'écran de connexion avec le
 message « Votre session a expiré » au lieu d'afficher une page d'erreur.
 
@@ -188,6 +192,7 @@ Endpoints : `GET /api/portal/me`, `GET|POST|PATCH|DELETE /api/cart*`,
 | GET | `/api/users` · `/api/users/:id` | Comptes utilisateurs (filtre `?role=`) |
 | GET | `/api/roles` | Rôles, résumés, permissions et modules |
 | POST | `/api/auth/login` | Connexion `{ email, password }` → jeton de démo + profil |
+| POST | `/api/auth/demo` | Connexion de démonstration `{ role }` (compte créé/réparé au besoin) |
 | POST | `/api/auth/register` | Création d'un compte client `{ name, email, password, phone, zone, address }` |
 | POST | `/api/auth/logout` | Ferme la session courante |
 | GET | `/api/auth/me` | Profil du porteur du jeton (401 si expiré) |

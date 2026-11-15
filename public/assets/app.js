@@ -61,7 +61,14 @@
       throw new Error('Serveur injoignable — vérifiez que l’application est démarrée (npm start)');
     }
     const text = await res.text();
-    const data = text ? JSON.parse(text) : null;
+    let data = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        throw new Error('Réponse illisible du serveur (HTTP ' + res.status + ')');
+      }
+    }
     if (res.status === 401 && !String(path).startsWith('/api/auth/login')) {
       state.authNotice = 'Votre session a expiré. Reconnectez-vous pour continuer.';
       signOut(true);
@@ -324,7 +331,7 @@
       client: 'client123'
     };
     const demoButtons = accounts.map((role) =>
-      '<button type="button" class="auth-demo-btn' + (role.key === 'client' ? ' wide' : '') + '" data-demo-email="' + esc(emails[role.key] || '') + '" data-demo-password="' + esc(passwords[role.key] || '') + '">' +
+      '<button type="button" class="auth-demo-btn' + (role.key === 'client' ? ' wide' : '') + '" data-demo-role="' + esc(role.key) + '" data-demo-email="' + esc(emails[role.key] || '') + '" data-demo-password="' + esc(passwords[role.key] || '') + '">' +
         '<span class="auth-demo-role">' + esc(role.label) + '</span>' +
         '<span class="auth-demo-mail">' + esc(emails[role.key] || '') + '</span>' +
       '</button>'
@@ -390,26 +397,35 @@
         });
     }
 
-    view.querySelectorAll('[data-demo-email]').forEach((btn) => {
+    view.querySelectorAll('[data-demo-role]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        document.getElementById('loginEmail').value = btn.dataset.demoEmail;
-        document.getElementById('loginPassword').value = btn.dataset.demoPassword;
+        document.getElementById('loginEmail').value = btn.dataset.demoEmail || '';
+        document.getElementById('loginPassword').value = btn.dataset.demoPassword || '';
         errorBox.hidden = true;
-        signIn(btn.dataset.demoEmail, btn.dataset.demoPassword).catch((err) => showError(err.message));
+        signInDemo(btn.dataset.demoRole).catch((err) => showError(err.message));
       });
     });
   }
 
-  async function signIn(email, password) {
-    const data = await api('/api/auth/login', { method: 'POST', body: { email: email, password: password } });
+  async function afterSignIn(data) {
     state.authNotice = null;
     persistSession({ token: data.token, user: data.user });
     await loadData();
     const route = getRoute();
     const target = canRoute(route) ? route : firstAllowedRoute();
-    if (target !== route) location.hash = '#/' + target;
     toast('Bienvenue ' + String(data.user.name || '').split(' ')[0]);
-    if (target === route) render();
+    if (target !== route) location.hash = '#/' + target;
+    else render();
+  }
+
+  async function signIn(email, password) {
+    const data = await api('/api/auth/login', { method: 'POST', body: { email: email, password: password } });
+    await afterSignIn(data);
+  }
+
+  async function signInDemo(role) {
+    const data = await api('/api/auth/demo', { method: 'POST', body: { role: role } });
+    await afterSignIn(data);
   }
 
   function signOut(silent) {
@@ -3121,14 +3137,22 @@
     state.roles = await api('/api/roles').catch(() => null);
     state.company = await api('/api/company').catch(() => null);
     state.session = loadSession();
-    if (state.session) {
-      try {
-        const me = await api('/api/auth/me');
-        persistSession({ token: state.session.token, user: me.user });
-      } catch (err) {
-        state.authNotice = 'Votre session a expiré. Reconnectez-vous pour continuer.';
-        persistSession(null);
+    const hadSession = !!state.session;
+    let restored = null;
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: state.session ? { Authorization: 'Bearer ' + state.session.token } : {}
+      });
+      if (res.ok) {
+        const data = await res.json();
+        restored = { token: data.token || (state.session && state.session.token), user: data.user };
       }
+    } catch (err) { /* serveur injoignable : l'écran de connexion l'indiquera */ }
+    if (restored && restored.token) {
+      persistSession(restored);
+    } else if (hadSession) {
+      state.authNotice = 'Votre session a expiré. Reconnectez-vous pour continuer.';
+      persistSession(null);
     }
     syncSessionUI();
     if (!state.session) {
