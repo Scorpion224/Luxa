@@ -13,13 +13,13 @@ de démonstration.
 
 ## Scripts
 
-| Commande | Rôle |
-|---|---|
-| `npm start` | démarre le serveur |
-| `npm run dev` | démarre avec rechargement automatique |
-| `npm run lint` | analyse ESLint (serveur, données, interface) |
-| `npm run format` | reformate le code avec Prettier |
-| `npm test` | tests automatisés (API + parcours) |
+| Commande         | Rôle                                         |
+| ---------------- | -------------------------------------------- |
+| `npm start`      | démarre le serveur                           |
+| `npm run dev`    | démarre avec rechargement automatique        |
+| `npm run lint`   | analyse ESLint (serveur, données, interface) |
+| `npm run format` | reformate le code avec Prettier              |
+| `npm test`       | tests automatisés (API + parcours)           |
 
 ## Organisation du code
 
@@ -44,3 +44,15 @@ Le dossier `.vscode/` fournit :
 
 Pour déboguer le serveur : `F5` → « Serveur API ».
 Pour déboguer l'interface : lancer « Serveur API », puis « Interface (Chrome) ».
+
+## Intégration continue
+
+Chaque `push` et chaque `pull request` déclenche `.github/workflows/ci.yml` :
+`npm ci`, `npm run lint`, `npm run format:check`, `npm test`, puis un démarrage
+réel de l'application avec vérification de `/api/health` et des cinq connexions
+de démonstration. Une branche rouge ne se fusionne pas ; en local, la même
+séquence s'exécute avec :
+
+```bash
+npm ci && npm run lint && npm run format:check && npm test
+```

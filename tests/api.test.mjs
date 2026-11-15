@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 const PORT = 3111;
+const SECRET = 'secret-de-test-suffisamment-long';
 const BASE = `http://127.0.0.1:${PORT}`;
 const dossier = mkdtempSync(path.join(tmpdir(), 'ppg-tests-'));
 let serveur;
@@ -19,7 +20,12 @@ let serveur;
 before(async () => {
   serveur = spawn(process.execPath, ['server.js'], {
     cwd: path.resolve(import.meta.dirname, '..'),
-    env: { ...process.env, PORT: String(PORT), DB_FILE: path.join(dossier, 'db.json') },
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      DB_FILE: path.join(dossier, 'db.json'),
+      SESSION_SECRET: SECRET
+    },
     stdio: 'ignore'
   });
   // attente de disponibilité (max 10 s)
@@ -142,6 +148,64 @@ test('le paiement par échéance est refusé hors financement FLEX validé', asy
   assert.equal(r.status, 400);
   const corps = await r.json();
   assert.match(corps.error, /FLEX|échéance/i);
+});
+
+test('diagnostic de déploiement exposé par /api/health', async () => {
+  const body = await (await fetch(BASE + '/api/health')).json();
+  assert.equal(body.stockage, 'persistant');
+  assert.ok(['SESSION_SECRET', 'base locale', 'généré'].includes(body.secret));
+  assert.equal(body.demoMode, true);
+});
+
+test('les jetons sont signés et survivent à un redémarrage (disque perdu)', async () => {
+  const { token } = await login('commercial');
+  assert.match(token, /^v1\./, 'jeton signé attendu');
+
+  // Redémarrage volontairement « hostile » : nouvelle base vide (comme un
+  // conteneur redéployé) et même secret de signature.
+  serveur.kill();
+  await new Promise((r) => setTimeout(r, 300));
+  serveur = spawn(process.execPath, ['server.js'], {
+    cwd: path.resolve(import.meta.dirname, '..'),
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      DB_FILE: path.join(dossier, 'db-neuve.json'),
+      SESSION_SECRET: SECRET
+    },
+    stdio: 'ignore'
+  });
+  for (let i = 0; i < 100; i++) {
+    try {
+      const r = await fetch(BASE + '/api/health');
+      if (r.ok) break;
+    } catch {
+      /* pas encore prêt */
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  const r = await appel(token, '/api/auth/me');
+  assert.equal(r.status, 200, 'la session doit survivre au redémarrage même sans base');
+});
+
+test('une route API inconnue renvoie du JSON, pas du HTML', async () => {
+  const r = await fetch(BASE + '/api/route-inexistante');
+  assert.equal(r.status, 404);
+  assert.match(r.headers.get('content-type'), /application\/json/);
+  const body = await r.json();
+  assert.match(body.error, /Route inconnue/);
+});
+
+test('le cookie de session est marqué Secure derrière un proxy HTTPS', async () => {
+  const r = await fetch(BASE + '/api/auth/demo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Forwarded-Proto': 'https' },
+    body: JSON.stringify({ role: 'admin' })
+  });
+  assert.equal(r.status, 200);
+  const cookie = r.headers.get('set-cookie') || '';
+  assert.match(cookie, /HttpOnly/);
+  assert.match(cookie, /Secure/);
 });
 
 test('connexion par URL /demo/:role', async () => {

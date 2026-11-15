@@ -3,9 +3,10 @@
  */
 
 const express = require('express');
-const { APP_VERSION } = require('../config');
+const { APP_VERSION, DEMO_MODE } = require('../config');
 const { ROLE_LABEL } = require('../lib/auth');
-const { db } = require('../store/database');
+const { db, isStorageWritable } = require('../store/database');
+const tokens = require('../lib/tokens');
 const roles = require('../../data/roles');
 
 const router = express.Router();
@@ -17,6 +18,11 @@ router.get('/api/health', (req, res) =>
     version: APP_VERSION,
     users: Array.isArray(db.users) ? db.users.length : 0,
     clients: Array.isArray(db.clients) ? db.clients.length : 0,
+    // Diagnostic de déploiement : lisible depuis /api/health
+    stockage: isStorageWritable() ? 'persistant' : 'mémoire (disque non inscriptible)',
+    demoMode: DEMO_MODE,
+    secret: tokens.SECRET_SOURCE,
+    horodatage: new Date().toISOString(),
     demoAccounts: [
       'admin@peinturepro.gn',
       'commercial@peinturepro.gn',

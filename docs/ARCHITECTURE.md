@@ -27,13 +27,14 @@ compilation : le navigateur charge directement des modules JavaScript natifs
 
 ## Serveur
 
-| Dossier | Rôle |
-|---|---|
+| Dossier                    | Rôle                                                                                                                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `server/store/database.js` | charge `data/db.json`, l'amorce depuis `data/seed.js`, applique les migrations douces et sauvegarde. Exporte `db` et `save()`. |
-| `server/lib/quotes.js` | calcul pur des devis (pièces, surfaces, postes, TVA) — aucune dépendance HTTP. |
-| `server/lib/auth.js` | utilisateurs publics, sessions persistées, cookies `HttpOnly`, `requirePermission()`. |
-| `server/lib/domain.js` | helpers métier partagés : panier, financement PEINTURE FLEX, finances. |
-| `server/routes/*.js` | un routeur Express par domaine ; chacun est monté dans `server/app.js`. |
+| `server/lib/quotes.js`     | calcul pur des devis (pièces, surfaces, postes, TVA) — aucune dépendance HTTP.                                                 |
+| `server/lib/auth.js`       | utilisateurs publics, sessions, cookies `HttpOnly`/`Secure`, `requirePermission()`.                                            |
+| `server/lib/tokens.js`     | jetons de session signés (HMAC SHA-256) : vérifiables sans base, donc insensibles aux redéploiements.                          |
+| `server/lib/domain.js`     | helpers métier partagés : panier, financement PEINTURE FLEX, finances.                                                         |
+| `server/routes/*.js`       | un routeur Express par domaine ; chacun est monté dans `server/app.js`.                                                        |
 
 **Ajouter une route** : créer le fichier dans `server/routes/`, y déclarer un
 `express.Router()`, puis l'ajouter à la liste des `app.use(...)` de `server/app.js`.
@@ -43,13 +44,13 @@ compilation : le navigateur charge directement des modules JavaScript natifs
 
 ## Interface
 
-| Dossier | Rôle |
-|---|---|
-| `public/assets/js/core/` | configuration, formatage, état, appels HTTP, routage, registre. |
-| `public/assets/js/ui/` | composants d'interface : gabarits, modales, impression, câblage. |
-| `public/assets/js/auth/` | écran de connexion et cycle de session. |
-| `public/assets/js/pages/` | une page = un module qui exporte son rendu et s'enregistre. |
-| `public/assets/js/main.js` | point d'entrée : écouteurs globaux + démarrage. |
+| Dossier                    | Rôle                                                             |
+| -------------------------- | ---------------------------------------------------------------- |
+| `public/assets/js/core/`   | configuration, formatage, état, appels HTTP, routage, registre.  |
+| `public/assets/js/ui/`     | composants d'interface : gabarits, modales, impression, câblage. |
+| `public/assets/js/auth/`   | écran de connexion et cycle de session.                          |
+| `public/assets/js/pages/`  | une page = un module qui exporte son rendu et s'enregistre.      |
+| `public/assets/js/main.js` | point d'entrée : écouteurs globaux + démarrage.                  |
 
 ### Principe du registre
 
@@ -59,7 +60,9 @@ Le routeur ne connaît pas les pages : chaque module de page s'enregistre lui-m�
 // public/assets/js/pages/clients.js
 import { pages } from '../core/registry.js';
 
-export async function renderClients() { /* … */ }
+export async function renderClients() {
+  /* … */
+}
 
 pages['clients'] = renderClients;
 ```

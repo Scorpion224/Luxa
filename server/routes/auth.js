@@ -18,8 +18,17 @@ const {
   tokenOf
 } = require('../lib/auth');
 const { db, save } = require('../store/database');
+const { DEMO_MODE } = require('../config');
 
 const router = express.Router();
+
+/* En déploiement réel (DEMO_MODE=false), les accès de démonstration sont fermés. */
+function refusDemo(res) {
+  return res.status(403).json({
+    error:
+      'Connexion de démonstration désactivée sur ce déploiement. Utilisez votre adresse email et votre mot de passe.'
+  });
+}
 
 router.get('/api/users', requirePermission('utilisateurs:read'), (req, res) => {
   const role = String(req.query.role || '').toLowerCase();
@@ -35,28 +44,31 @@ router.get('/api/users/:id', requirePermission('utilisateurs:read'), (req, res) 
 
 // Utile quand l'aperçu intégré ne transmet pas les clics.
 router.get('/demo/:role', (req, res) => {
+  if (!DEMO_MODE) return refusDemo(res);
   const opened = openDemoSession(req.params.role);
   if (!opened)
     return res.redirect(
       303,
       '/?erreur=' + encodeURIComponent('Espace de démonstration inconnu : ' + req.params.role)
     );
-  setSessionCookie(res, opened.token);
+  setSessionCookie(req, res, opened.token);
   res.redirect(303, '/?espace=' + encodeURIComponent(opened.user.role) + '#/');
 });
 
 router.get('/api/auth/demo-link/:role', (req, res) => {
+  if (!DEMO_MODE) return refusDemo(res);
   const opened = openDemoSession(req.params.role);
   if (!opened) return res.status(404).json({ error: 'Espace inconnu' });
-  setSessionCookie(res, opened.token);
+  setSessionCookie(req, res, opened.token);
   res.json({ token: opened.token, user: publicUser(opened.user) });
 });
 
 // Repli sans JavaScript : un formulaire HTML classique connecte et redirige.
 router.post('/api/auth/demo-form', (req, res) => {
+  if (!DEMO_MODE) return refusDemo(res);
   const opened = openDemoSession((req.body && req.body.role) || '');
   if (!opened) return res.redirect(303, '/?erreur=' + encodeURIComponent('Espace de démonstration inconnu.'));
-  setSessionCookie(res, opened.token);
+  setSessionCookie(req, res, opened.token);
   res.redirect(303, '/?espace=' + encodeURIComponent(opened.user.role) + '#/');
 });
 
@@ -71,7 +83,7 @@ router.post('/api/auth/login-form', (req, res) => {
   if (result.error) return res.redirect(303, '/?erreur=' + encodeURIComponent(result.error));
   const token = newToken(result.user);
   createSession(token, result.user.id);
-  setSessionCookie(res, token);
+  setSessionCookie(req, res, token);
   res.redirect(303, '/#/');
 });
 
@@ -90,17 +102,18 @@ router.post('/api/auth/login', (req, res) => {
   save();
   const token = newToken(user);
   createSession(token, user.id);
-  setSessionCookie(res, token);
+  setSessionCookie(req, res, token);
   res.json({ token, user: publicUser(user) });
 });
 
 /* Connexion de démonstration en un clic : ne peut pas échouer (le compte est créé/réparé) */
 router.post('/api/auth/demo', (req, res) => {
+  if (!DEMO_MODE) return refusDemo(res);
   const role = String((req.body && req.body.role) || '').toLowerCase();
   const opened = openDemoSession(role);
   if (!opened)
     return res.status(400).json({ error: 'Rôle de démonstration inconnu : ' + (role || '(vide)') });
-  setSessionCookie(res, opened.token);
+  setSessionCookie(req, res, opened.token);
   res.json({ token: opened.token, user: publicUser(opened.user) });
 });
 
@@ -170,7 +183,7 @@ router.post('/api/auth/logout', (req, res) => {
   const header = String(req.headers.authorization || '');
   const token = header.startsWith('Bearer ') ? header.slice(7).trim() : readCookie(req, 'ppg_session');
   if (token) dropSession(token);
-  clearSessionCookie(res);
+  clearSessionCookie(req, res);
   res.json({ ok: true });
 });
 

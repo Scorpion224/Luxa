@@ -1,0 +1,68 @@
+name: Intégration continue
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verifier:
+    name: Lint, format et tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v5
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérifier le style du code
+        run: npm run lint
+
+      - name: Vérifier le formatage
+        run: npm run format:check
+
+      - name: Lancer les tests
+        run: |
+          set +e
+          npm test 2>&1 | tee /tmp/tests.log
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then
+            # remonte les tests en échec sous forme d'annotation lisible
+            grep -E '^not ok' /tmp/tests.log | head -20 | while read -r line; do
+              echo "::error::$line"
+            done
+            tail -40 /tmp/tests.log | while read -r line; do
+              echo "::error::$line"
+            done
+          fi
+          exit "$code"
+
+      - name: Démarrer l'application et vérifier /api/health
+        run: |
+          DB_FILE="$RUNNER_TEMP/db-ci.json" npm start &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:3000/api/health > /tmp/health.json; then break; fi
+            sleep 0.5
+          done
+          cat /tmp/health.json
+          grep -q '"status":"ok"' /tmp/health.json
+
+      - name: Vérifier que les connexions de démonstration répondent
+        run: |
+          for role in admin commercial comptable stockiste client; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3000/api/auth/demo \
+              -H 'Content-Type: application/json' -d "{\"role\":\"$role\"}")
+            echo "$role → $code"
+            test "$code" = "200"
+          done

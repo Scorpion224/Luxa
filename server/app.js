@@ -9,6 +9,10 @@ const { PUBLIC_DIR } = require('./config');
 
 const app = express();
 
+/* Derrière un proxy (Render, Railway, Nginx, aperçu Arena) : permet à Express de
+   connaître le protocole réel et donc d'émettre un cookie « Secure » en HTTPS. */
+app.set('trust proxy', true);
+
 app.use(cors());
 
 app.use(express.json({ limit: '1mb' }));
@@ -40,6 +44,12 @@ app.use(require('./routes/portal'));
 app.use(require('./routes/chantiers'));
 app.use(require('./routes/finance'));
 
+/* Route API inconnue : réponse JSON claire (sinon le client recevrait du HTML). */
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'Route inconnue : ' + req.method + ' ' + req.originalUrl });
+});
+
+/* Repli SPA : toute autre URL rend l'application. */
 app.use((req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });

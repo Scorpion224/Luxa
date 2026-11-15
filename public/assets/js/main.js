@@ -73,6 +73,7 @@ window.addEventListener('hashchange', () => {
   // aligne le client sur la version du serveur : évite une interface périmée restée en cache
   try {
     const health = await api('/api/health');
+    state.demoMode = health.demoMode !== false;
     if (String(health.version || '').indexOf(APP_VERSION) !== 0) {
       if (!sessionStorage.getItem('ppg.build')) {
         sessionStorage.setItem('ppg.build', '1');
@@ -126,7 +127,7 @@ window.addEventListener('hashchange', () => {
   // était dans un espace de démonstration, on le rebranche tout seul, sans écran de
   // connexion ni message d'erreur.
   if (!restored && rejected) {
-    const demoRole = loadDemoRole();
+    const demoRole = wanted || loadDemoRole();
     if (demoRole) {
       try {
         const data = await api('/api/auth/demo', { method: 'POST', body: { role: demoRole } });
@@ -137,15 +138,16 @@ window.addEventListener('hashchange', () => {
     }
   }
 
+  // Espace demandé par l'URL (menu « Changer d'espace », lien /demo/...) :
+  // on l'ouvre même si une autre session était encore active, et même sans session.
+  let wanted = '';
+  try {
+    wanted = new URLSearchParams(location.search).get('espace') || '';
+  } catch (err) {}
+
   if (restored && restored.token) {
     persistSession(restored);
     state.authNotice = null;
-    // Changement d'espace demandé par l'URL (menu « Changer d'espace ») :
-    // on ouvre l'espace demandé même si une autre session était encore active.
-    let wanted = '';
-    try {
-      wanted = new URLSearchParams(location.search).get('espace') || '';
-    } catch (err) {}
     if (wanted && (!restored.user || restored.user.role !== wanted)) {
       try {
         const data = await api('/api/auth/demo', { method: 'POST', body: { role: wanted } });
@@ -164,6 +166,19 @@ window.addEventListener('hashchange', () => {
     persistSession(null);
   }
   syncSessionUI();
+  // Écran de connexion demandé explicitement (?connexion=1) : on l'affiche même
+  // si une session est déjà ouverte, pour pouvoir changer de compte.
+  let forceLogin = false;
+  try {
+    forceLogin = new URLSearchParams(location.search).get('connexion') === '1';
+  } catch (err) {}
+  if (forceLogin) {
+    // même présentation que lors d'un premier chargement : sans barre latérale
+    document.body.classList.add('auth-mode');
+    renderLoginScreen();
+    return;
+  }
+
   // Accès direct : si aucune session valide n'a pu être restaurée, on ouvre
   // automatiquement l'espace de démonstration (dernier utilisé, sinon administrateur).
   // L'écran de connexion ne s'affiche plus que si l'utilisateur s'est déconnecté
@@ -173,12 +188,8 @@ window.addEventListener('hashchange', () => {
     try {
       voluntaryLogout = sessionStorage.getItem('ppg.loggedOut') === '1';
     } catch (err) {}
-    let forceLogin = false;
-    try {
-      forceLogin = new URLSearchParams(location.search).get('connexion') === '1';
-    } catch (err) {}
-    if (!voluntaryLogout && !forceLogin) {
-      const role = loadDemoRole() || 'admin';
+    if (!voluntaryLogout && !forceLogin && state.demoMode !== false) {
+      const role = wanted || loadDemoRole() || 'admin';
       try {
         const data = await api('/api/auth/demo', { method: 'POST', body: { role: role } });
         if (data && data.token) {

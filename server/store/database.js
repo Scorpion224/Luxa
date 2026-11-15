@@ -105,15 +105,39 @@ function ensureDemoUser(demo) {
   return user;
 }
 
+/* Certains hébergements (conteneurs sans volume, systèmes en lecture seule)
+   n'autorisent pas l'écriture : on continue en mémoire et on l'explique une
+   seule fois, au lieu de répéter une erreur à chaque requête. */
+let storageWritable = true;
+let storageWarningShown = false;
+
 function save() {
+  if (!storageWritable) return false;
   try {
     fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+    return true;
   } catch (err) {
-    console.error('Impossible d’enregistrer les données :', err.message);
+    storageWritable = false;
+    if (!storageWarningShown) {
+      storageWarningShown = true;
+      console.warn(
+        '\n  Stockage non inscriptible (' +
+          err.message +
+          ').\n' +
+          '  L’application continue en mémoire : les comptes de démonstration et les\n' +
+          '  connexions fonctionnent, mais les données sont perdues au redémarrage.\n' +
+          '  Pour les conserver, définissez DB_FILE vers un volume persistant.\n'
+      );
+    }
+    return false;
   }
+}
+
+function isStorageWritable() {
+  return storageWritable;
 }
 
 save();
 
-module.exports = { db, save, ensureDemoAccounts, ensureDemoUser };
+module.exports = { db, save, isStorageWritable, ensureDemoAccounts, ensureDemoUser };
