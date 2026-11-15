@@ -44,3 +44,15 @@ Le dossier `.vscode/` fournit :
 
 Pour déboguer le serveur : `F5` → « Serveur API ».
 Pour déboguer l'interface : lancer « Serveur API », puis « Interface (Chrome) ».
+
+## Intégration continue
+
+Chaque `push` et chaque `pull request` déclenche `.github/workflows/ci.yml` :
+`npm ci`, `npm run lint`, `npm run format:check`, `npm test`, puis un démarrage
+réel de l'application avec vérification de `/api/health` et des cinq connexions
+de démonstration. Une branche rouge ne se fusionne pas ; en local, la même
+séquence s'exécute avec :
+
+```bash
+npm ci && npm run lint && npm run format:check && npm test
+```

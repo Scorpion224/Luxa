@@ -1,5 +1,7 @@
 # Peinture Pro Guinée
 
+![Intégration continue](https://github.com/Scorpion224/Luxa/actions/workflows/ci.yml/badge.svg)
+
 Application de gestion commerciale d'une entreprise de peinture en Guinée :
 devis, catalogue, clients, stocks, chantiers, finance, **PEINTURE FLEX** et
 **espace client**.
