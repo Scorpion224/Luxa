@@ -826,6 +826,7 @@
       state.payment.quoteId = list[0].id;
     }
     const data = await api('/api/payments/' + encodeURIComponent(state.payment.quoteId));
+    state.payment.total = data.quote.total;
     const tab = state.payment.tab;
 
     const options = list.map((q) =>
@@ -885,8 +886,53 @@
     }).join('');
   }
 
+  function flexMonthsSelect(current, id) {
+    let html = '<select class="select select-xs" id="' + id + '" aria-label="Durée du crédit">';
+    for (let m = 1; m <= 12; m++) {
+      html += '<option value="' + m + '"' + (m === current ? ' selected' : '') + '>' + m + ' mois</option>';
+    }
+    return html + '</select>';
+  }
+
+  function flexTerms(plan, canEdit) {
+    if (!plan) return '';
+    return '<div class="flex-terms">' +
+      '<div class="flex-term"><span>Abonnement</span><strong>' + money(plan.subscription) + '</strong></div>' +
+      (canEdit
+        ? '<div class="flex-term"><span>Durée</span>' + flexMonthsSelect(plan.months, 'flexMonths') + '</div>'
+        : '<div class="flex-term"><span>Durée</span><strong>' + plan.months + ' mois · ' + Math.round(plan.rate * 100) + ' %</strong></div>') +
+      '<div class="flex-term"><span>Mensualité</span><strong>' + money(plan.monthly) + '</strong></div>' +
+      '<div class="flex-term"><span>Intérêts</span><strong>' + money(plan.interest) + '</strong></div>' +
+    '</div>' +
+    '<div class="flex-offer"><i class="fa-solid fa-paint-roller"></i> ' + esc(flexOffer) + '</div>';
+  }
+
+  const flexOffer = "Prestation de peinture offerte dès que le dossier est validé par la banque";
+
+  function flexSetup(data) {
+    const total = data.quote.total;
+    const subscription = Math.min(250000, total);
+    const financed = Math.max(0, total - subscription);
+    const preview = Math.round((financed * 1.06) / 6);
+    return '<div class="card-body flex-setup">' +
+      '<p class="flex-setup-intro"><i class="fa-solid fa-circle-info"></i> Ce devis n’a pas encore d’échéancier PEINTURE FLEX. ' +
+        'Le client règle un abonnement de ' + money(subscription) + ' à la banque (acompte et garantie de prestation), ' +
+        'puis le solde est financé sur 1 à 12 mois à 1 % par mois, après validation du dossier bancaire.</p>' +
+      '<div class="flex-setup-row">' +
+        '<label for="flexMonths">Durée du crédit</label>' +
+        flexMonthsSelect(6, 'flexMonthsSetup') +
+        '<span class="flex-setup-amount">≈ ' + money(preview) + ' / mois sur 6 mois</span>' +
+        (can('paiement:write')
+          ? '<button class="btn btn-primary btn-sm" data-action="flex-setup"><i class="fa-solid fa-calculator"></i> Mettre en place l’échéancier</button>'
+          : '') +
+      '</div>' +
+    '</div>';
+  }
+
   function paymentFlex(data, options) {
-    const status = data.quote.status;
+    const plan = data.flex;
+    const locked = plan && !data.bankValidated;
+    const canEditPlan = can('paiement:write') && plan && !(data.schedule || []).some((s) => s.status === 'paye');
     return '<div class="pay-grid">' +
       '<div class="pay-col">' +
         '<div class="card">' +
@@ -896,17 +942,21 @@
             '<span class="spacer"></span>' +
             '<select class="select" id="paymentQuote" aria-label="Choisir un devis" style="width:185px">' + options + '</select>' +
           '</div>' +
-          '<table class="data">' +
-            '<thead><tr><th>Étape</th><th>Montant</th><th>Échéance</th><th>Statut</th></tr></thead>' +
-            '<tbody>' + scheduleRows(data.schedule) + '</tbody>' +
-          '</table>' +
+          ((data.schedule && data.schedule.length)
+            ? '<table class="data">' +
+                '<thead><tr><th>Étape</th><th>Montant</th><th>Échéance</th><th>Statut</th></tr></thead>' +
+                '<tbody>' + scheduleRows(data.schedule) + '</tbody>' +
+              '</table>'
+            : flexSetup(data)) +
         '</div>' +
-        '<div class="remaining-box' + (can('paiement:write') ? ' clickable' : '') + '"' + (can('paiement:write') ? ' role="button" tabindex="0" data-action="payment-new" title="Encaisser un paiement"' : '') + '>' +
+        '<div class="remaining-box' + (can('paiement:write') && !locked ? ' clickable' : '') + '"' +
+          (can('paiement:write') && !locked ? ' role="button" tabindex="0" data-action="payment-new" title="Encaisser un paiement"' : '') + '>' +
           '<span class="remaining-icon"><i class="fa-solid fa-coins"></i></span>' +
           '<span class="remaining-divider"></span>' +
           '<span class="label">Reste dû</span>' +
           '<span class="value">' + money(data.remaining) + '</span>' +
           '<span class="spacer" style="flex:1"></span>' +
+          (locked ? '<span class="remaining-lock"><i class="fa-solid fa-lock"></i> Crédit à débloquer</span>' : '') +
           '<span class="remaining-cta"><i class="fa-solid fa-arrow-right"></i></span>' +
         '</div>' +
       '</div>' +
@@ -915,7 +965,15 @@
           '<span class="card-icon"><i class="fa-solid fa-building-columns"></i></span>' +
           '<span class="card-title">Dossier de financement<small>(Banque partenaire)</small></span>' +
         '</div>' +
-        '<div class="card-body"><div class="timeline">' + timelineMarkup(data.financing) + '</div></div>' +
+        '<div class="card-body"><div class="timeline">' + timelineMarkup(data.financing) + '</div>' +
+          (plan ? flexTerms(plan, canEditPlan) : '') +
+          (locked
+            ? '<div class="flex-alert"><i class="fa-solid fa-triangle-exclamation"></i><div>' +
+                '<strong>Crédit bloqué</strong>' +
+                '<span>La banque doit valider la crédibilité du client avant le déblocage du crédit et le démarrage des travaux.</span>' +
+              '</div></div>'
+            : '') +
+        '</div>' +
       '</div>' +
     '</div>';
   }
@@ -951,7 +1009,7 @@
             '<div class="detail-row"><span class="k">Reste à payer</span><span class="v" style="color:#a83d27">' + money(Math.max(0, data.quote.total - data.paidTotal)) + '</span></div>' +
           '</div></div>' +
         '</div>' +
-        '<div class="remaining-box">' +
+        '<div class="remaining-box compact">' +
           '<span class="remaining-icon"><i class="fa-solid fa-coins"></i></span>' +
           '<span class="remaining-divider"></span>' +
           '<span class="label">Reste dû</span>' +
@@ -990,7 +1048,7 @@
             '<div class="detail-row"><span class="k">Statut du dossier</span><span class="v">' + ((fin && fin.steps[2] && fin.steps[2].label) || 'Non transmis') + '</span></div>' +
           '</div></div>' +
         '</div>' +
-        '<div class="remaining-box">' +
+        '<div class="remaining-box compact">' +
           '<span class="remaining-icon"><i class="fa-solid fa-coins"></i></span>' +
           '<span class="remaining-divider"></span>' +
           '<span class="label">Reste dû</span>' +
@@ -1444,7 +1502,7 @@
       openModal(
         modalHead('Enregistrer un paiement', 'Devis ' + esc(data.quote.id) + ' • ' + esc(data.quote.clientName)) +
         '<div class="modal-body"><div class="form-grid">' +
-          '<div class="field"><label>Montant (GNF) *</label><input class="input" id="pAmount" type="number" value="' + (p.amount || '') + '" placeholder="0"></div>' +
+          '<div class="field"><label>Montant (GNF) *</label><input class="input" id="pAmount" type="number" value="' + defaultAmount + '" placeholder="0"></div>' +
           '<div class="field"><label>Date</label><input class="input" id="pDate" type="date" value="' + todayIso() + '"></div>' +
           '<div class="field"><label>Mode</label><select class="select" id="pMethod">' +
             Object.keys(METHOD_LABEL).map((m) => '<option value="' + m + '">' + METHOD_LABEL[m] + '</option>').join('') +
@@ -1644,6 +1702,21 @@
     'chantier-update'(el) { openChantierUpdate(el.dataset.id); },
     'chantier-new-open'() { openChantierForm(); },
     'go-home'() { go(firstAllowedRoute()); },
+    async 'flex-setup'(el) {
+      const select = document.getElementById('flexMonthsSetup') || document.getElementById('flexMonths');
+      const months = select ? Number(select.value) : 6;
+      try {
+        el.setAttribute('disabled', 'disabled');
+        await api('/api/payments/' + encodeURIComponent(state.payment.quoteId) + '/schedule', {
+          method: 'POST', body: { months: months }
+        });
+        toast('Échéancier PEINTURE FLEX créé sur ' + months + ' mois');
+        render();
+      } catch (err) {
+        el.removeAttribute('disabled');
+        toast(err.message, 'error');
+      }
+    },
     async 'chantier-save'(el) {
       try {
         await api('/api/chantiers/' + encodeURIComponent(el.dataset.id), {
@@ -1941,6 +2014,33 @@
       const sel = document.getElementById('paymentQuote');
       if (sel) {
         sel.addEventListener('change', () => { state.payment.quoteId = sel.value; render(); });
+      }
+      const setupMonths = document.getElementById('flexMonthsSetup');
+      if (setupMonths) {
+        setupMonths.addEventListener('change', () => {
+          const preview = document.querySelector('.flex-setup-amount');
+          if (!preview) return;
+          const total = Number(state.payment.total || 0);
+          const financed = Math.max(0, total - Math.min(250000, total));
+          const n = Number(setupMonths.value) || 1;
+          const monthly = Math.round((financed * (1 + 0.01 * n)) / n);
+          preview.textContent = '≈ ' + money(monthly) + ' / mois sur ' + n + ' mois';
+        });
+      }
+      const planMonths = document.getElementById('flexMonths');
+      if (planMonths) {
+        planMonths.addEventListener('change', async () => {
+          const months = Number(planMonths.value);
+          try {
+            await api('/api/payments/' + encodeURIComponent(state.payment.quoteId) + '/schedule', {
+              method: 'POST', body: { months: months }
+            });
+            toast('Durée du crédit mise à jour : ' + months + ' mois');
+            render();
+          } catch (err) {
+            toast(err.message, 'error');
+          }
+        });
       }
     }
   }

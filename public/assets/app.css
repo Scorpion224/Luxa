@@ -1177,3 +1177,62 @@ body.auth-mode .nav-item { display: none; }
 .denied h2 { font-size: 18px; font-weight: 700; color: #16323a; }
 .denied p { font-size: 13px; color: #6d7d7d; max-width: 430px; line-height: 1.5; }
 .denied .btn { margin-top: 6px; }
+
+/* --------------------------------------------------------------------------
+   PEINTURE FLEX — conditions, mise en place et alertes
+   -------------------------------------------------------------------------- */
+.flex-terms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 12px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #f0e8dc;
+  border-radius: 10px;
+  background: #fbfaf5;
+}
+.flex-term { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.flex-term span { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.03em; color: #8a999a; }
+.flex-term strong { font-size: 12px; font-weight: 600; color: #16323a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flex-offer {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 8px;
+  padding: 8px 11px;
+  font-size: 11px; line-height: 1.4; color: #217a46; background: #f2f9f3;
+  border: 1px solid #e2efe4;
+  border-radius: 10px;
+}
+.flex-offer i { font-size: 12px; }
+
+.flex-alert {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin-top: 14px; padding: 10px 12px;
+  border-radius: 10px;
+  background: #fdf6e8; border: 1px solid #f1e3c8;
+  color: #8a5a12;
+}
+.flex-alert i { margin-top: 2px; color: #cf8a1f; }
+.flex-alert div { display: flex; flex-direction: column; gap: 2px; }
+.flex-alert strong { font-size: 12px; }
+.flex-alert span { font-size: 11px; line-height: 1.4; color: #8a6a3f; }
+.flex-alert.ok { background: #eff7f0; border-color: #d9e9db; color: #217a46; }
+.flex-alert.ok i { color: #217a46; }
+.flex-alert.ok span { color: #4b6d55; }
+
+.flex-setup { padding: 16px 16px 18px; }
+.flex-setup-intro { font-size: 12.5px; line-height: 1.55; color: #5b6e6e; background: #f7faf8; border: 1px solid #e6efe8; border-radius: 10px; padding: 11px 13px; }
+.flex-setup-intro i { color: #0c5e62; margin-right: 4px; }
+.flex-setup-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.flex-setup-row label { font-size: 12px; font-weight: 600; color: #45595b; }
+.flex-setup-amount { font-size: 12px; color: #6d7d7d; }
+.select.select-xs { height: 30px; font-size: 11.5px; padding: 0 8px; width: 96px; }
+
+.remaining-lock { font-size: 11px; font-weight: 600; color: #a9610f; white-space: nowrap; margin-right: 6px; }
+.remaining-lock i { font-size: 10px; margin-right: 3px; }
+
+.pay-col .card .data td { padding-top: 5px; padding-bottom: 5px; }
+
+.remaining-box.compact { gap: 10px; padding: 0 12px; }
+.remaining-box.compact .label { font-size: 13px; }
+.remaining-box.compact .value { font-size: 19px; }
+.remaining-box.compact .remaining-icon { width: 34px; height: 34px; font-size: 14px; }

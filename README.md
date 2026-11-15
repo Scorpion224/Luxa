@@ -91,6 +91,31 @@ Exemple de référence : 5,2 / 6,0 / 3,0 m, 2 portes, 3 fenêtres → 104,4 m² 
 36 L à 75 000 = 2 700 000 ; 104,4 m² à 30 000 = 3 132 000 ; transport 250 000 ;
 TVA 338 000 ; **total 6 420 000 GNF**.
 
+## PEINTURE FLEX (financement)
+
+Défini dans `data/flex.js`, appliqué par l'API et l'écran « Parcours de paiement » :
+
+1. **Abonnement 250 000 GNF** — réglé à la banque, il sert d'acompte et de
+   garantie de prestation (première ligne de l'échéancier).
+2. **Validation bancaire obligatoire** — le dossier de financement passe par
+   *Dossier → Pièces → Transmis → Décision de la banque*. Tant que la décision
+   n'est pas « Validée », le crédit est bloqué : la boîte « Reste dû » affiche
+   un cadenas et l'API refuse l'encaissement d'une échéance (`400`).
+3. **Crédit de 1 à 12 mois** — le solde du devis (`total − abonnement`) est
+   financé au taux de **1 % par mois** (intérêts simples). La mensualité est la
+   même sur toute la durée, la dernière échéance absorbe l'arrondi.
+4. **Prestation offerte** — une fois le dossier validé, la peinture est offerte
+   (mention affichée dans le bloc de conditions).
+
+Exemple (DV-2026-031, 12 500 000 GNF sur 5 mois) : abonnement 250 000,
+financé 12 250 000, intérêts 612 500, mensualité **2 572 500**, total
+13 112 500 GNF.
+
+Endpoints : `POST /api/payments/:quoteId/schedule` avec `{ months }` crée ou
+recalcule le plan (refusé si une échéance est déjà payée) ;
+`POST /api/payments/:quoteId/financing/advance` fait avancer le dossier bancaire
+et débloque le crédit à la validation.
+
 ## API
 
 | Méthode | Route | Rôle |

@@ -2,6 +2,7 @@
  * Données de démonstration - Peinture Pro Guinée
  * Toutes les valeurs sont exprimées en GNF.
  */
+const { buildFlexPlan } = require('./flex');
 
 const COMPANY = {
   name: 'PEINTURE PRO GUINÉE',
@@ -434,21 +435,38 @@ function defaultSchedule(total) {
   ];
 }
 
-const FLAGSHIP_SCHEDULE = [
-  { id: 's1', step: 'Acompte reçu', amount: 3000000, dueDate: '2026-01-15', status: 'paye' },
-  { id: 's2', step: 'Échéance 1 payée', amount: 2000000, dueDate: '2026-01-30', status: 'paye' },
-  { id: 's3', step: 'Échéance 2 en retard', amount: 2100000, dueDate: '2026-02-15', status: 'en_retard' },
-  { id: 's4', step: 'Conditions à valider localement', amount: null, dueDate: null, status: 'a_valider' }
-];
+/* PEINTURE FLEX — devis phare DV-2026-031 : abonnement 250 000 + crédit 5 mois à 1 %/mois */
+const FLAGSHIP_PLAN = buildFlexPlan(12500000, 5, { startDate: '2025-12-15' });
+
+const FLAGSHIP_SCHEDULE = FLAGSHIP_PLAN.schedule
+  .map((step, index) => {
+    if (index === 0) return Object.assign({}, step, { status: 'paye' });
+    if (index === 1) return Object.assign({}, step, { status: 'paye' });
+    if (index === 2) return Object.assign({}, step, { status: 'en_retard' });
+    return step;
+  });
+
+const FLAGSHIP_FLEX = {
+  months: FLAGSHIP_PLAN.months,
+  rate: FLAGSHIP_PLAN.rate,
+  subscription: FLAGSHIP_PLAN.subscription,
+  financed: FLAGSHIP_PLAN.financed,
+  interest: FLAGSHIP_PLAN.interest,
+  totalCredit: FLAGSHIP_PLAN.totalCredit,
+  monthly: FLAGSHIP_PLAN.monthly,
+  total: FLAGSHIP_PLAN.total,
+  startDate: FLAGSHIP_PLAN.startDate,
+  bankValidated: true
+};
 
 const FLAGSHIP_FINANCING = {
   bank: 'Banque partenaire',
-  amount: 7500000,
+  amount: FLAGSHIP_PLAN.financed,
   steps: [
     { name: 'Dossier', date: '10 janv. 2026 à 09:24', status: 'valide', label: 'Validé' },
     { name: 'Pièces', date: '11 janv. 2026 à 14:07', status: 'completes', label: 'Complètes' },
-    { name: 'Transmis', date: '12 janv. 2026 à 10:31', status: 'en_cours', label: 'En cours' },
-    { name: 'Décision de la banque', date: null, status: 'en_attente', label: 'En attente' }
+    { name: 'Transmis', date: '12 janv. 2026 à 10:31', status: 'valide', label: 'Transmis' },
+    { name: 'Décision de la banque', date: '14 janv. 2026 à 16:40', status: 'valide', label: 'Validée' }
   ]
 };
 
@@ -476,6 +494,7 @@ function makeQuote(o) {
       length: 6, width: 4, height: 3, doors: 1, windows: 2
     }],
     schedule: o.schedule || [],
+    flex: o.flex || null,
     financing: o.financing || null,
     notes: o.notes || ''
   };
@@ -487,8 +506,8 @@ const QUOTES = [
     subject: 'Rénovation de 12 chambres', site: 'Kaloum, Conakry',
     createdAt: '2026-02-12', validUntil: '2026-03-14', status: 'brouillon', relance: true,
     total: 12500000, finish: 'Finition mate • Blanc Cassé', surface: 320, roomName: 'Chambres 201 à 212',
-    schedule: FLAGSHIP_SCHEDULE, financing: FLAGSHIP_FINANCING,
-    notes: 'Acompte de 30 % à la commande. Peinture FOM mate sur murs et plafonds.'
+    schedule: FLAGSHIP_SCHEDULE, flex: FLAGSHIP_FLEX, financing: FLAGSHIP_FINANCING,
+    notes: 'PEINTURE FLEX : abonnement 250 000 GNF à la banque, solde financé sur 5 mois à 1 %/mois.'
   }),
   makeQuote({
     id: 'DV-2026-030', clientId: 'c2', clientName: 'Villa Ratoma', clientCompany: null,
@@ -620,13 +639,13 @@ const PAYMENTS = [
   },
   {
     id: 'AC-2026-011', clientId: 'c1', clientName: 'Hôtel Kaloum', quoteId: 'DV-2026-031',
-    amount: 2000000, date: '2026-01-30', method: 'mobile_money', reference: 'OM-992341',
-    notes: 'Échéance 1', createdAt: '2026-01-30T14:10:00'
+    amount: FLAGSHIP_PLAN.monthly, date: '2026-01-15', method: 'mobile_money', reference: 'OM-992341',
+    notes: 'Échéance 1 — PEINTURE FLEX', createdAt: '2026-01-15T14:10:00'
   },
   {
     id: 'AC-2026-008', clientId: 'c1', clientName: 'Hôtel Kaloum', quoteId: 'DV-2026-031',
-    amount: 3000000, date: '2026-01-15', method: 'virement', reference: 'VIR-88421',
-    notes: 'Acompte initial — Peinture Flex', createdAt: '2026-01-15T09:24:00'
+    amount: FLAGSHIP_PLAN.subscription, date: '2025-12-15', method: 'virement', reference: 'VIR-88421',
+    notes: 'Abonnement FLEX — garantie de prestation (banque)', createdAt: '2025-12-15T09:24:00'
   },
   {
     id: 'AC-2026-003', clientId: 'c4', clientName: 'Amadou Diallo', quoteId: 'DV-2026-024',

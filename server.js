@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const seed = require('./data/seed');
 const roles = require('./data/roles');
+const flex = require('./data/flex');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -542,6 +543,8 @@ function paymentSummary(quote) {
   return {
     schedule,
     financing: quote.financing || null,
+    flex: quote.flex || null,
+    bankValidated: flex.isBankValidated(quote),
     paidTotal,
     paidSteps: paidSteps.length,
     remaining,
@@ -591,6 +594,9 @@ app.post('/api/payments/:quoteId/pay', requirePermission('paiement:write'), (req
   };
   db.payments.unshift(payment);
   const step = (quote.schedule || []).find((s) => s.id === body.stepId);
+  if (step && step.kind === 'installment' && !flex.isBankValidated(quote)) {
+    return res.status(400).json({ error: 'Le dossier bancaire doit être validé avant de régler les échéances de crédit' });
+  }
   if (step) {
     if (step.amount === null) {
       step.amount = amount;
@@ -617,7 +623,48 @@ app.post('/api/payments/:quoteId/pay', requirePermission('paiement:write'), (req
 app.post('/api/payments/:quoteId/schedule', requirePermission('paiement:write'), (req, res) => {
   const quote = findQuote(req.params.quoteId);
   if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
-  const { step, amount, dueDate } = req.body || {};
+  const { step, amount, dueDate, months } = req.body || {};
+
+  /* Mise en place (ou recalcul) d'un plan PEINTURE FLEX */
+  if (months) {
+    const duration = Math.round(Number(months));
+    if (!(duration >= flex.FLEX.minMonths && duration <= flex.FLEX.maxMonths)) {
+      return res.status(400).json({ error: 'La durée doit être comprise entre 1 et 12 mois' });
+    }
+    if ((quote.schedule || []).some((s) => s.status === 'paye')) {
+      return res.status(400).json({ error: 'Des échéances sont déjà réglées : la durée ne peut plus être modifiée' });
+    }
+    const plan = flex.buildFlexPlan(quote.total, duration, { startDate: (req.body || {}).startDate });
+    quote.flex = {
+      months: plan.months,
+      rate: plan.rate,
+      subscription: plan.subscription,
+      financed: plan.financed,
+      interest: plan.interest,
+      totalCredit: plan.totalCredit,
+      monthly: plan.monthly,
+      total: plan.total,
+      startDate: plan.startDate,
+      bankValidated: flex.isBankValidated(quote)
+    };
+    quote.schedule = plan.schedule;
+    if (!quote.financing) {
+      quote.financing = {
+        bank: flex.FLEX.bank,
+        amount: plan.financed,
+        steps: [
+          { name: 'Dossier', date: null, status: 'en_attente', label: 'En attente' },
+          { name: 'Pièces', date: null, status: 'en_attente', label: 'En attente' },
+          { name: 'Transmis', date: null, status: 'en_attente', label: 'En attente' },
+          { name: 'Décision de la banque', date: null, status: 'en_attente', label: 'En attente' }
+        ]
+      };
+    }
+    if (quote.status === 'brouillon' || quote.status === 'envoye') quote.status = 'accepte';
+    save();
+    return res.status(201).json(paymentSummary(quote));
+  }
+
   if (!step || !amount) return res.status(400).json({ error: 'Étape et montant obligatoires' });
   quote.schedule = quote.schedule || [];
   quote.schedule.push({
@@ -735,6 +782,7 @@ app.post('/api/payments/:quoteId/financing/advance', requirePermission('paiement
     decision.label = 'Validée';
     decision.date = nowLabel();
   }
+  if (quote.flex && flex.isBankValidated(quote)) quote.flex.bankValidated = true;
   save();
   res.json({ financing: quote.financing });
 });
