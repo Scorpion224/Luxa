@@ -1,17 +1,29 @@
 {
   "name": "peinture-pro-guinee",
-  "version": "2.0.0",
-  "description": "Application complète de gestion commerciale — Peinture Pro Guinée",
+  "version": "3.0.0",
+  "description": "Application de gestion commerciale Peinture Pro Guinée : devis, catalogue, stocks, chantiers, finance, PEINTURE FLEX et espace client.",
+  "private": true,
   "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "lint": "eslint server data public/assets/js tests server.js",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write \"server/**/*.js\" \"data/**/*.js\" \"public/assets/js/**/*.js\" \"public/assets/css/**/*.css\" \"*.md\" \"docs/*.md\"",
+    "format:check": "prettier --check \"server/**/*.js\" \"public/assets/js/**/*.js\"",
+    "test": "node --test \"tests/**/*.test.mjs\"",
+    "reset": "node -e \"require('fs').rmSync('data/db.json', { force: true }); console.log('base de démonstration réinitialisée')\""
   },
   "keywords": [
     "peinture",
     "devis",
     "guinee",
-    "gestion"
+    "gestion",
+    "express",
+    "spa"
   ],
   "author": "Peinture Pro Guinée",
   "license": "UNLICENSED",
@@ -19,5 +31,9 @@
     "cors": "^2.8.5",
     "express": "^4.22.3",
     "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.3",
+    "prettier": "^3.8.4"
   }
 }

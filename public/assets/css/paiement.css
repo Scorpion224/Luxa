@@ -1,0 +1,128 @@
+/* Paiement, PEINTURE FLEX et échéanciers. */
+
+/* ======
+   Paiement
+   ========================================================================== */
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  gap: 4px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+}
+.tab {
+  height: 46px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--teal);
+  letter-spacing: -0.01em;
+}
+.tab i { font-size: 15px; }
+.tab:hover { background: var(--mint); }
+.tab.active { background: var(--teal); color: #fff; }
+.tab.active:hover { background: var(--teal); }
+
+.pay-grid { display: grid; grid-template-columns: minmax(0, 1.72fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.pay-col { display: flex; flex-direction: column; gap: 14px; }
+
+.step-icon {
+  width: 19px; height: 19px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 9px; flex: 0 0 19px;
+}
+.step-icon.paye { background: #2f9a58; }
+.step-icon.en_retard { background: #d2452c; }
+.step-icon.a_valider, .step-icon.a_venir { background: #edbf6a; color: #6c4b0d; }
+.step-icon.en_attente { background: #dfe3de; color: #8b978f; }
+.step-name { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #2c4245; }
+
+.remaining-box {
+  display: flex; align-items: center; gap: 16px;
+  background: var(--mint); border-radius: 10px; padding: 13px 18px;
+}
+.remaining-icon {
+  width: 38px; height: 38px; border-radius: 50%; background: #14a06a; color: #fff;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.remaining-box .label { font-size: 17px; font-weight: 600; color: #1d4a3f; }
+.remaining-box .value { font-size: 26px; font-weight: 700; color: #14453f; letter-spacing: -0.02em; }
+.remaining-divider { width: 1px; height: 30px; background: #cfe1d3; }
+
+.timeline { position: relative; padding-left: 0; }
+.tl-item { display: flex; gap: 11px; position: relative; padding-bottom: 20px; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-dot {
+  width: 25px; height: 25px; border-radius: 50%; flex: 0 0 25px; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #fff; z-index: 1; background: #e2e6e1; color: #9aa69c;
+}
+.tl-dot.valide, .tl-dot.completes { background: #2f9a58; color: #fff; }
+.tl-dot.en_cours { background: #0f6e70; color: #fff; box-shadow: 0 0 0 4px #dbeae4; }
+.tl-item::before {
+  content: ''; position: absolute; left: 12px; top: 25px; bottom: 0; width: 1.5px; background: #dfe6e0;
+}
+.tl-item:last-child::before { display: none; }
+.tl-item.done::before { background: #2f9a58; }
+.tl-body { flex: 1; min-width: 0; padding-top: 1px; }
+.tl-name { font-size: 13px; font-weight: 600; color: #16333a; }
+.tl-date { font-size: 11.5px; color: #8b9997; margin-top: 2px; }
+.tl-item .badge { margin-left: auto; }
+
+/* ======
+   Clients / Stocks / Chantiers / Finance
+   ========================================================================== */
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.section-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+
+.client-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.client-card { padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: box-shadow .16s ease, transform .16s ease; }
+.client-card:hover { box-shadow: 0 8px 22px rgba(27, 66, 61, 0.09); transform: translateY(-1px); }
+.client-top { display: flex; align-items: flex-start; gap: 11px; }
+.client-avatar {
+  width: 38px; height: 38px; border-radius: 50%; background: var(--mint); color: var(--teal);
+  display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex: 0 0 38px;
+}
+.client-name { font-size: 14.5px; font-weight: 700; color: #16333a; }
+.client-company { font-size: 11.5px; color: var(--muted); }
+.client-meta { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: #5b6e6e; }
+.client-meta i { width: 15px; color: #93a2a1; font-size: 11px; }
+.client-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding-top: 10px; border-top: 1px solid #f2ece3; }
+.client-stat .lbl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.client-stat .val { font-size: 13px; font-weight: 600; color: #1c3a3d; }
+.client-stat .val.money { color: var(--teal); }
+
+.stock-bar { height: 6px; border-radius: 999px; background: #eef0ea; overflow: hidden; min-width: 84px; }
+.stock-bar span { display: block; height: 100%; border-radius: 999px; }
+.stock-bar .ok { background: #46a06b; }
+.stock-bar .moyen { background: #e0a52f; }
+.stock-bar .bas { background: #d2492f; }
+
+.chantier-card { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.chantier-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.chantier-name { font-size: 14.5px; font-weight: 700; color: #16333a; letter-spacing: -0.01em; }
+.chantier-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.progress { height: 7px; border-radius: 999px; background: #eef0ea; overflow: hidden; }
+.progress span { display: block; height: 100%; background: linear-gradient(90deg, #12806f, #3aa06e); border-radius: 999px; }
+.progress.amber span { background: linear-gradient(90deg, #d79a2c, #e6b652); }
+.chantier-foot { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--muted); }
+
+.finance-chart { display: flex; align-items: flex-end; gap: 14px; height: 150px; padding: 8px 4px 0; }
+.finance-chart .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; height: 100%; justify-content: flex-end; }
+.finance-chart .bar { width: 100%; max-width: 46px; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, #1b8f7f, #0c5e62); min-height: 4px; transition: height .4s ease; }
+.finance-chart .bar-label { font-size: 10.5px; color: var(--muted); }
+.finance-chart .bar-val { font-size: 10px; color: #63757a; font-weight: 600; }
+
+.detail-list { display: grid; gap: 10px; }
+.detail-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; }
+.detail-row .k { color: var(--muted); }
+.detail-row .v { color: #1c3a3d; font-weight: 600; text-align: right; }

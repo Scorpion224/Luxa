@@ -33,7 +33,8 @@ const PRODUCTS = [
     image: 'assets/product-fom-mat-20l.png',
     finish: 'Mat',
     swatch: '#3F8F94',
-    description: 'Peinture acrylique intérieure mate, lessivable, faible odeur. Idéale pour les pièces de vie.'
+    description:
+      'Peinture acrylique intérieure mate, lessivable, faible odeur. Idéale pour les pièces de vie.'
   },
   {
     id: 'p2',
@@ -350,44 +351,100 @@ const PRODUCTS = [
 
 const CLIENTS = [
   {
-    id: 'c1', name: 'Hôtel Kaloum', contact: 'M. Ousmane Bah', company: 'Hôtel Kaloum',
-    phone: '+224 622 00 11 22', email: 'achats@hotelkaloum.gn', city: 'Conakry',
-    address: 'Avenue de la République, Kaloum', type: 'Professionnel', since: '2024-03-12'
+    id: 'c1',
+    name: 'Hôtel Kaloum',
+    contact: 'M. Ousmane Bah',
+    company: 'Hôtel Kaloum',
+    phone: '+224 622 00 11 22',
+    email: 'achats@hotelkaloum.gn',
+    city: 'Conakry',
+    address: 'Avenue de la République, Kaloum',
+    type: 'Professionnel',
+    since: '2024-03-12'
   },
   {
-    id: 'c2', name: 'Villa Ratoma', contact: 'Mme Aïssatou Diallo', company: null,
-    phone: '+224 655 31 42 08', email: 'aissatou.diallo@gmail.com', city: 'Conakry',
-    address: 'Quartier Ratoma, près de la mosquée', type: 'Particulier', since: '2025-11-04'
+    id: 'c2',
+    name: 'Villa Ratoma',
+    contact: 'Mme Aïssatou Diallo',
+    company: null,
+    phone: '+224 655 31 42 08',
+    email: 'aissatou.diallo@gmail.com',
+    city: 'Conakry',
+    address: 'Quartier Ratoma, près de la mosquée',
+    type: 'Particulier',
+    since: '2025-11-04'
   },
   {
-    id: 'c3', name: 'Mme Camara', contact: 'Fatoumata Camara', company: 'Camara Habitat',
-    phone: '+224 655 44 55 66', email: 'fatou@camara.gn', city: 'Kamsar',
-    address: 'Cité des Cadres, Kamsar', type: 'Professionnel', since: '2025-06-18'
+    id: 'c3',
+    name: 'Mme Camara',
+    contact: 'Fatoumata Camara',
+    company: 'Camara Habitat',
+    phone: '+224 655 44 55 66',
+    email: 'fatou@camara.gn',
+    city: 'Kamsar',
+    address: 'Cité des Cadres, Kamsar',
+    type: 'Professionnel',
+    since: '2025-06-18'
   },
   {
-    id: 'c4', name: 'Amadou Diallo', contact: 'Amadou Diallo', company: 'Diallo Construction',
-    phone: '+224 622 11 22 33', email: 'amadou.diallo@email.com', city: 'Conakry',
-    address: 'Matoto, Conakry', type: 'Professionnel', since: '2023-09-02'
+    id: 'c4',
+    name: 'Amadou Diallo',
+    contact: 'Amadou Diallo',
+    company: 'Diallo Construction',
+    phone: '+224 622 11 22 33',
+    email: 'amadou.diallo@email.com',
+    city: 'Conakry',
+    address: 'Matoto, Conakry',
+    type: 'Professionnel',
+    since: '2023-09-02'
   },
   {
-    id: 'c5', name: 'Ibrahima Sow', contact: 'Ibrahima Sow', company: 'Sow BTP',
-    phone: '+224 628 77 88 99', email: 'ibrahima.sow@gmail.com', city: 'Conakry',
-    address: 'Kipé, Ratoma', type: 'Professionnel', since: '2024-01-22'
+    id: 'c5',
+    name: 'Ibrahima Sow',
+    contact: 'Ibrahima Sow',
+    company: 'Sow BTP',
+    phone: '+224 628 77 88 99',
+    email: 'ibrahima.sow@gmail.com',
+    city: 'Conakry',
+    address: 'Kipé, Ratoma',
+    type: 'Professionnel',
+    since: '2024-01-22'
   },
   {
-    id: 'c6', name: 'Mariama Bah', contact: 'Mariama Bah', company: 'Bah Peinture Pro',
-    phone: '+224 611 22 33 44', email: 'mariama.bah@yahoo.fr', city: 'Kindia',
-    address: 'Centre-ville, Kindia', type: 'Revendeur', since: '2024-07-30'
+    id: 'c6',
+    name: 'Mariama Bah',
+    contact: 'Mariama Bah',
+    company: 'Bah Peinture Pro',
+    phone: '+224 611 22 33 44',
+    email: 'mariama.bah@yahoo.fr',
+    city: 'Kindia',
+    address: 'Centre-ville, Kindia',
+    type: 'Revendeur',
+    since: '2024-07-30'
   },
   {
-    id: 'c7', name: 'Résidence Koloma', contact: 'Syndic Koloma', company: 'Syndic Résidence Koloma',
-    phone: '+224 664 05 18 40', email: 'syndic.koloma@email.com', city: 'Conakry',
-    address: 'Koloma, Ratoma', type: 'Professionnel', since: '2025-02-14'
+    id: 'c7',
+    name: 'Résidence Koloma',
+    contact: 'Syndic Koloma',
+    company: 'Syndic Résidence Koloma',
+    phone: '+224 664 05 18 40',
+    email: 'syndic.koloma@email.com',
+    city: 'Conakry',
+    address: 'Koloma, Ratoma',
+    type: 'Professionnel',
+    since: '2025-02-14'
   },
   {
-    id: 'c8', name: 'Pharmacie Madina', contact: 'Dr. Sékou Touré', company: 'Pharmacie Madina',
-    phone: '+224 621 47 90 12', email: 'pharmacie.madina@email.com', city: 'Conakry',
-    address: 'Madina, Matam', type: 'Professionnel', since: '2025-05-09'
+    id: 'c8',
+    name: 'Pharmacie Madina',
+    contact: 'Dr. Sékou Touré',
+    company: 'Pharmacie Madina',
+    phone: '+224 621 47 90 12',
+    email: 'pharmacie.madina@email.com',
+    city: 'Conakry',
+    address: 'Madina, Matam',
+    type: 'Professionnel',
+    since: '2025-05-09'
   }
 ];
 
@@ -406,16 +463,31 @@ function buildQuoteLines(total, finish = 'Finition mate', surface = 96) {
     tvaAmount: total - ht,
     lines: [
       {
-        icon: 'paint', designation: 'Peinture intérieure', detail: finish,
-        qty: liters, unit: 'L', unitPrice: Math.round(paint / liters), amount: paint
+        icon: 'paint',
+        designation: 'Peinture intérieure',
+        detail: finish,
+        qty: liters,
+        unit: 'L',
+        unitPrice: Math.round(paint / liters),
+        amount: paint
       },
       {
-        icon: 'labor', designation: 'Main-d’œuvre', detail: 'Application (2 couches)',
-        qty: surface, unit: 'm²', unitPrice: Math.round(labor / surface), amount: labor
+        icon: 'labor',
+        designation: 'Main-d’œuvre',
+        detail: 'Application (2 couches)',
+        qty: surface,
+        unit: 'm²',
+        unitPrice: Math.round(labor / surface),
+        amount: labor
       },
       {
-        icon: 'transport', designation: 'Transport', detail: 'Livraison sur site',
-        qty: 1, unit: 'forfait', unitPrice: transport, amount: transport
+        icon: 'transport',
+        designation: 'Transport',
+        detail: 'Livraison sur site',
+        qty: 1,
+        unit: 'forfait',
+        unitPrice: transport,
+        amount: transport
       }
     ]
   };
@@ -438,13 +510,12 @@ function defaultSchedule(total) {
 /* PEINTURE FLEX — devis phare DV-2026-031 : abonnement 250 000 + crédit 5 mois à 1 %/mois */
 const FLAGSHIP_PLAN = buildFlexPlan(12500000, 5, { startDate: '2025-12-15' });
 
-const FLAGSHIP_SCHEDULE = FLAGSHIP_PLAN.schedule
-  .map((step, index) => {
-    if (index === 0) return Object.assign({}, step, { status: 'paye' });
-    if (index === 1) return Object.assign({}, step, { status: 'paye' });
-    if (index === 2) return Object.assign({}, step, { status: 'en_retard' });
-    return step;
-  });
+const FLAGSHIP_SCHEDULE = FLAGSHIP_PLAN.schedule.map((step, index) => {
+  if (index === 0) return Object.assign({}, step, { status: 'paye' });
+  if (index === 1) return Object.assign({}, step, { status: 'paye' });
+  if (index === 2) return Object.assign({}, step, { status: 'en_retard' });
+  return step;
+});
 
 const FLAGSHIP_FLEX = {
   months: FLAGSHIP_PLAN.months,
@@ -489,10 +560,16 @@ function makeQuote(o) {
     tvaRate: COMPANY.tvaRate,
     tvaAmount: built.tvaAmount,
     lines: built.lines,
-    rooms: [{
-      name: o.roomName || 'Espace principal',
-      length: 6, width: 4, height: 3, doors: 1, windows: 2
-    }],
+    rooms: [
+      {
+        name: o.roomName || 'Espace principal',
+        length: 6,
+        width: 4,
+        height: 3,
+        doors: 1,
+        windows: 2
+      }
+    ],
     schedule: o.schedule || [],
     flex: o.flex || null,
     financing: o.financing || null,
@@ -502,194 +579,470 @@ function makeQuote(o) {
 
 const QUOTES = [
   makeQuote({
-    id: 'DV-2026-031', clientId: 'c1', clientName: 'Hôtel Kaloum', clientCompany: 'Hôtel Kaloum',
-    subject: 'Rénovation de 12 chambres', site: 'Kaloum, Conakry',
-    createdAt: '2026-02-12', validUntil: '2026-03-14', status: 'brouillon', relance: true,
-    total: 12500000, finish: 'Finition mate • Blanc Cassé', surface: 320, roomName: 'Chambres 201 à 212',
-    schedule: FLAGSHIP_SCHEDULE, flex: FLAGSHIP_FLEX, financing: FLAGSHIP_FINANCING,
+    id: 'DV-2026-031',
+    clientId: 'c1',
+    clientName: 'Hôtel Kaloum',
+    clientCompany: 'Hôtel Kaloum',
+    subject: 'Rénovation de 12 chambres',
+    site: 'Kaloum, Conakry',
+    createdAt: '2026-02-12',
+    validUntil: '2026-03-14',
+    status: 'brouillon',
+    relance: true,
+    total: 12500000,
+    finish: 'Finition mate • Blanc Cassé',
+    surface: 320,
+    roomName: 'Chambres 201 à 212',
+    schedule: FLAGSHIP_SCHEDULE,
+    flex: FLAGSHIP_FLEX,
+    financing: FLAGSHIP_FINANCING,
     notes: 'PEINTURE FLEX : abonnement 250 000 GNF à la banque, solde financé sur 5 mois à 1 %/mois.'
   }),
   makeQuote({
-    id: 'DV-2026-030', clientId: 'c2', clientName: 'Villa Ratoma', clientCompany: null,
-    subject: 'Peinture villa R+1', site: 'Ratoma, Conakry',
-    createdAt: '2026-02-11', validUntil: '2026-03-13', status: 'envoye', relance: true,
-    total: 8750000, finish: 'Finition satin • Beige sable', surface: 240, roomName: 'Séjour et chambres',
+    id: 'DV-2026-030',
+    clientId: 'c2',
+    clientName: 'Villa Ratoma',
+    clientCompany: null,
+    subject: 'Peinture villa R+1',
+    site: 'Ratoma, Conakry',
+    createdAt: '2026-02-11',
+    validUntil: '2026-03-13',
+    status: 'envoye',
+    relance: true,
+    total: 8750000,
+    finish: 'Finition satin • Beige sable',
+    surface: 240,
+    roomName: 'Séjour et chambres',
     notes: 'Devis envoyé par WhatsApp le 11 février.'
   }),
   makeQuote({
-    id: 'DV-2026-029', clientId: 'c3', clientName: 'Mme Camara', clientCompany: 'Camara Habitat',
-    subject: 'Finition intérieure villa Kamsar', site: 'Kamsar',
-    createdAt: '2026-02-09', validUntil: '2026-03-11', status: 'accepte', relance: false,
-    total: 6200000, finish: 'Finition mate • Blanc Cassé', surface: 180, roomName: 'Villa complète',
+    id: 'DV-2026-029',
+    clientId: 'c3',
+    clientName: 'Mme Camara',
+    clientCompany: 'Camara Habitat',
+    subject: 'Finition intérieure villa Kamsar',
+    site: 'Kamsar',
+    createdAt: '2026-02-09',
+    validUntil: '2026-03-11',
+    status: 'accepte',
+    relance: false,
+    total: 6200000,
+    finish: 'Finition mate • Blanc Cassé',
+    surface: 180,
+    roomName: 'Villa complète',
     notes: 'Bon pour accord signé le 10 février 2026.'
   }),
   makeQuote({
-    id: 'DV-2026-028', clientId: 'c4', clientName: 'Amadou Diallo', clientCompany: 'Diallo Construction',
-    subject: 'Peinture immeuble Koloma', site: 'Koloma, Conakry',
-    createdAt: '2026-02-06', status: 'envoye', relance: true, total: 4100000,
-    finish: 'Finition satin • Gris perle', surface: 150
+    id: 'DV-2026-028',
+    clientId: 'c4',
+    clientName: 'Amadou Diallo',
+    clientCompany: 'Diallo Construction',
+    subject: 'Peinture immeuble Koloma',
+    site: 'Koloma, Conakry',
+    createdAt: '2026-02-06',
+    status: 'envoye',
+    relance: true,
+    total: 4100000,
+    finish: 'Finition satin • Gris perle',
+    surface: 150
   }),
   makeQuote({
-    id: 'DV-2026-027', clientId: 'c5', clientName: 'Ibrahima Sow', clientCompany: 'Sow BTP',
-    subject: 'Façade villa Kipé', site: 'Kipé, Conakry',
-    createdAt: '2026-02-04', status: 'brouillon', relance: false, total: 3200000,
-    finish: 'Finition extérieure • Ocre', surface: 140
+    id: 'DV-2026-027',
+    clientId: 'c5',
+    clientName: 'Ibrahima Sow',
+    clientCompany: 'Sow BTP',
+    subject: 'Façade villa Kipé',
+    site: 'Kipé, Conakry',
+    createdAt: '2026-02-04',
+    status: 'brouillon',
+    relance: false,
+    total: 3200000,
+    finish: 'Finition extérieure • Ocre',
+    surface: 140
   }),
   makeQuote({
-    id: 'DV-2026-026', clientId: 'c6', clientName: 'Mariama Bah', clientCompany: 'Bah Peinture Pro',
-    subject: 'Réassort revendeur Kindia', site: 'Kindia',
-    createdAt: '2026-02-02', status: 'accepte', relance: false, total: 2750000,
-    finish: 'Finition mate • Teinte à définir', surface: 90
+    id: 'DV-2026-026',
+    clientId: 'c6',
+    clientName: 'Mariama Bah',
+    clientCompany: 'Bah Peinture Pro',
+    subject: 'Réassort revendeur Kindia',
+    site: 'Kindia',
+    createdAt: '2026-02-02',
+    status: 'accepte',
+    relance: false,
+    total: 2750000,
+    finish: 'Finition mate • Teinte à définir',
+    surface: 90
   }),
   makeQuote({
-    id: 'DV-2026-025', clientId: 'c7', clientName: 'Résidence Koloma', clientCompany: 'Syndic Résidence Koloma',
-    subject: 'Rafraîchissement halls', site: 'Koloma, Conakry',
-    createdAt: '2026-01-30', status: 'envoye', relance: true, total: 2400000,
-    finish: 'Finition satin • Lin', surface: 80
+    id: 'DV-2026-025',
+    clientId: 'c7',
+    clientName: 'Résidence Koloma',
+    clientCompany: 'Syndic Résidence Koloma',
+    subject: 'Rafraîchissement halls',
+    site: 'Koloma, Conakry',
+    createdAt: '2026-01-30',
+    status: 'envoye',
+    relance: true,
+    total: 2400000,
+    finish: 'Finition satin • Lin',
+    surface: 80
   }),
   makeQuote({
-    id: 'DV-2026-024', clientId: 'c8', clientName: 'Pharmacie Madina', clientCompany: 'Pharmacie Madina',
-    subject: 'Local commercial Madina', site: 'Madina, Conakry',
-    createdAt: '2026-01-28', status: 'accepte', relance: false, total: 1850000,
-    finish: 'Finition brillant • Blanc', surface: 70
+    id: 'DV-2026-024',
+    clientId: 'c8',
+    clientName: 'Pharmacie Madina',
+    clientCompany: 'Pharmacie Madina',
+    subject: 'Local commercial Madina',
+    site: 'Madina, Conakry',
+    createdAt: '2026-01-28',
+    status: 'accepte',
+    relance: false,
+    total: 1850000,
+    finish: 'Finition brillant • Blanc',
+    surface: 70
   }),
   makeQuote({
-    id: 'DV-2026-023', clientId: 'c1', clientName: 'Hôtel Kaloum', clientCompany: 'Hôtel Kaloum',
-    subject: 'Réfection réception', site: 'Kaloum, Conakry',
-    createdAt: '2026-01-26', status: 'envoye', relance: false, total: 1600000,
-    finish: 'Finition satin • Sable', surface: 60
+    id: 'DV-2026-023',
+    clientId: 'c1',
+    clientName: 'Hôtel Kaloum',
+    clientCompany: 'Hôtel Kaloum',
+    subject: 'Réfection réception',
+    site: 'Kaloum, Conakry',
+    createdAt: '2026-01-26',
+    status: 'envoye',
+    relance: false,
+    total: 1600000,
+    finish: 'Finition satin • Sable',
+    surface: 60
   }),
   makeQuote({
-    id: 'DV-2026-022', clientId: 'c2', clientName: 'Villa Ratoma', clientCompany: null,
-    subject: 'Salle de bain et couloir', site: 'Ratoma, Conakry',
-    createdAt: '2026-01-24', status: 'brouillon', relance: false, total: 1500000,
-    finish: 'Finition satin • Blanc cassé', surface: 45
+    id: 'DV-2026-022',
+    clientId: 'c2',
+    clientName: 'Villa Ratoma',
+    clientCompany: null,
+    subject: 'Salle de bain et couloir',
+    site: 'Ratoma, Conakry',
+    createdAt: '2026-01-24',
+    status: 'brouillon',
+    relance: false,
+    total: 1500000,
+    finish: 'Finition satin • Blanc cassé',
+    surface: 45
   }),
   makeQuote({
-    id: 'DV-2026-021', clientId: 'c4', clientName: 'Amadou Diallo', clientCompany: 'Diallo Construction',
-    subject: 'Sous-couche nouveau bâtiment', site: 'Matoto, Conakry',
-    createdAt: '2026-01-22', status: 'envoye', relance: true, total: 1250000,
-    finish: 'Primaire • Blanc', surface: 110
+    id: 'DV-2026-021',
+    clientId: 'c4',
+    clientName: 'Amadou Diallo',
+    clientCompany: 'Diallo Construction',
+    subject: 'Sous-couche nouveau bâtiment',
+    site: 'Matoto, Conakry',
+    createdAt: '2026-01-22',
+    status: 'envoye',
+    relance: true,
+    total: 1250000,
+    finish: 'Primaire • Blanc',
+    surface: 110
   }),
   makeQuote({
-    id: 'DV-2026-020', clientId: 'c5', clientName: 'Ibrahima Sow', clientCompany: 'Sow BTP',
-    subject: 'Bureaux Sow BTP', site: 'Kipé, Conakry',
-    createdAt: '2026-01-20', status: 'brouillon', relance: false, total: 950000,
-    finish: 'Finition mate • Gris clair', surface: 40
+    id: 'DV-2026-020',
+    clientId: 'c5',
+    clientName: 'Ibrahima Sow',
+    clientCompany: 'Sow BTP',
+    subject: 'Bureaux Sow BTP',
+    site: 'Kipé, Conakry',
+    createdAt: '2026-01-20',
+    status: 'brouillon',
+    relance: false,
+    total: 950000,
+    finish: 'Finition mate • Gris clair',
+    surface: 40
   }),
   makeQuote({
-    id: 'DV-2026-019', clientId: 'c6', clientName: 'Mariama Bah', clientCompany: 'Bah Peinture Pro',
-    subject: 'Commande accessoires chantier', site: 'Kindia',
-    createdAt: '2026-01-18', status: 'accepte', relance: false, total: 850000,
-    finish: 'Accessoires et consommables', surface: 0
+    id: 'DV-2026-019',
+    clientId: 'c6',
+    clientName: 'Mariama Bah',
+    clientCompany: 'Bah Peinture Pro',
+    subject: 'Commande accessoires chantier',
+    site: 'Kindia',
+    createdAt: '2026-01-18',
+    status: 'accepte',
+    relance: false,
+    total: 850000,
+    finish: 'Accessoires et consommables',
+    surface: 0
   }),
   makeQuote({
-    id: 'DV-2026-018', clientId: 'c7', clientName: 'Résidence Koloma', clientCompany: 'Syndic Résidence Koloma',
-    subject: 'Escalier et garde-corps', site: 'Koloma, Conakry',
-    createdAt: '2026-01-16', status: 'brouillon', relance: false, total: 700000,
-    finish: 'Laque • Gris anthracite', surface: 25
+    id: 'DV-2026-018',
+    clientId: 'c7',
+    clientName: 'Résidence Koloma',
+    clientCompany: 'Syndic Résidence Koloma',
+    subject: 'Escalier et garde-corps',
+    site: 'Koloma, Conakry',
+    createdAt: '2026-01-16',
+    status: 'brouillon',
+    relance: false,
+    total: 700000,
+    finish: 'Laque • Gris anthracite',
+    surface: 25
   })
 ];
 
 const PAYMENTS = [
   {
-    id: 'AC-2026-007', clientId: 'c8', clientName: 'Pharmacie Madina', quoteId: 'DV-2026-024',
-    amount: 1850000, date: '2026-02-01', method: 'especes', reference: 'ESP-2204',
-    notes: 'Règlement local commercial', createdAt: '2026-02-01T12:20:00'
+    id: 'AC-2026-007',
+    clientId: 'c8',
+    clientName: 'Pharmacie Madina',
+    quoteId: 'DV-2026-024',
+    amount: 1850000,
+    date: '2026-02-01',
+    method: 'especes',
+    reference: 'ESP-2204',
+    notes: 'Règlement local commercial',
+    createdAt: '2026-02-01T12:20:00'
   },
   {
-    id: 'AC-2026-006', clientId: 'c7', clientName: 'Résidence Koloma', quoteId: 'DV-2026-025',
-    amount: 2400000, date: '2026-01-12', method: 'virement', reference: 'VIR-88032',
-    notes: 'Solde halls A et B', createdAt: '2026-01-12T10:05:00'
+    id: 'AC-2026-006',
+    clientId: 'c7',
+    clientName: 'Résidence Koloma',
+    quoteId: 'DV-2026-025',
+    amount: 2400000,
+    date: '2026-01-12',
+    method: 'virement',
+    reference: 'VIR-88032',
+    notes: 'Solde halls A et B',
+    createdAt: '2026-01-12T10:05:00'
   },
   {
-    id: 'AC-2026-005', clientId: 'c5', clientName: 'Ibrahima Sow', quoteId: 'DV-2026-027',
-    amount: 1800000, date: '2025-12-09', method: 'mobile_money', reference: 'OM-660218',
-    notes: 'Acompte façade Kipé', createdAt: '2025-12-09T16:32:00'
+    id: 'AC-2026-005',
+    clientId: 'c5',
+    clientName: 'Ibrahima Sow',
+    quoteId: 'DV-2026-027',
+    amount: 1800000,
+    date: '2025-12-09',
+    method: 'mobile_money',
+    reference: 'OM-660218',
+    notes: 'Acompte façade Kipé',
+    createdAt: '2025-12-09T16:32:00'
   },
   {
-    id: 'AC-2026-004', clientId: 'c4', clientName: 'Amadou Diallo', quoteId: 'DV-2026-028',
-    amount: 3200000, date: '2025-11-18', method: 'cheque', reference: 'CHQ-4518',
-    notes: 'Acompte immeuble Koloma', createdAt: '2025-11-18T09:45:00'
+    id: 'AC-2026-004',
+    clientId: 'c4',
+    clientName: 'Amadou Diallo',
+    quoteId: 'DV-2026-028',
+    amount: 3200000,
+    date: '2025-11-18',
+    method: 'cheque',
+    reference: 'CHQ-4518',
+    notes: 'Acompte immeuble Koloma',
+    createdAt: '2025-11-18T09:45:00'
   },
   {
-    id: 'AC-2026-002', clientId: 'c1', clientName: 'Hôtel Kaloum', quoteId: 'DV-2026-023',
-    amount: 2500000, date: '2025-10-05', method: 'virement', reference: 'VIR-81007',
-    notes: 'Réfection réception', createdAt: '2025-10-05T11:10:00'
+    id: 'AC-2026-002',
+    clientId: 'c1',
+    clientName: 'Hôtel Kaloum',
+    quoteId: 'DV-2026-023',
+    amount: 2500000,
+    date: '2025-10-05',
+    method: 'virement',
+    reference: 'VIR-81007',
+    notes: 'Réfection réception',
+    createdAt: '2025-10-05T11:10:00'
   },
   {
-    id: 'AC-2026-001', clientId: 'c6', clientName: 'Mariama Bah', quoteId: 'DV-2026-019',
-    amount: 1200000, date: '2025-09-12', method: 'virement', reference: 'VIR-79233',
-    notes: 'Commande accessoires', createdAt: '2025-09-12T14:00:00'
+    id: 'AC-2026-001',
+    clientId: 'c6',
+    clientName: 'Mariama Bah',
+    quoteId: 'DV-2026-019',
+    amount: 1200000,
+    date: '2025-09-12',
+    method: 'virement',
+    reference: 'VIR-79233',
+    notes: 'Commande accessoires',
+    createdAt: '2025-09-12T14:00:00'
   },
   {
-    id: 'AC-2026-014', clientId: 'c2', clientName: 'Villa Ratoma', quoteId: 'DV-2026-030',
-    amount: 2000000, date: '2026-02-08', method: 'especes', reference: 'ESP-2281',
-    notes: 'Acompte de démarrage', createdAt: '2026-02-08T10:12:00'
+    id: 'AC-2026-014',
+    clientId: 'c2',
+    clientName: 'Villa Ratoma',
+    quoteId: 'DV-2026-030',
+    amount: 2000000,
+    date: '2026-02-08',
+    method: 'especes',
+    reference: 'ESP-2281',
+    notes: 'Acompte de démarrage',
+    createdAt: '2026-02-08T10:12:00'
   },
   {
-    id: 'AC-2026-013', clientId: 'c3', clientName: 'Mme Camara', quoteId: 'DV-2026-029',
-    amount: 1500000, date: '2026-02-05', method: 'mobile_money', reference: 'OM-771204',
-    notes: 'Premier versement', createdAt: '2026-02-05T15:40:00'
+    id: 'AC-2026-013',
+    clientId: 'c3',
+    clientName: 'Mme Camara',
+    quoteId: 'DV-2026-029',
+    amount: 1500000,
+    date: '2026-02-05',
+    method: 'mobile_money',
+    reference: 'OM-771204',
+    notes: 'Premier versement',
+    createdAt: '2026-02-05T15:40:00'
   },
   {
-    id: 'AC-2026-012', clientId: 'c6', clientName: 'Mariama Bah', quoteId: 'DV-2026-026',
-    amount: 2400000, date: '2026-02-02', method: 'virement', reference: 'VIR-90211',
-    notes: 'Règlement réassort', createdAt: '2026-02-02T09:05:00'
+    id: 'AC-2026-012',
+    clientId: 'c6',
+    clientName: 'Mariama Bah',
+    quoteId: 'DV-2026-026',
+    amount: 2400000,
+    date: '2026-02-02',
+    method: 'virement',
+    reference: 'VIR-90211',
+    notes: 'Règlement réassort',
+    createdAt: '2026-02-02T09:05:00'
   },
   {
-    id: 'AC-2026-011', clientId: 'c1', clientName: 'Hôtel Kaloum', quoteId: 'DV-2026-031',
-    amount: FLAGSHIP_PLAN.monthly, date: '2026-01-15', method: 'mobile_money', reference: 'OM-992341',
-    notes: 'Échéance 1 — PEINTURE FLEX', createdAt: '2026-01-15T14:10:00'
+    id: 'AC-2026-011',
+    clientId: 'c1',
+    clientName: 'Hôtel Kaloum',
+    quoteId: 'DV-2026-031',
+    amount: FLAGSHIP_PLAN.monthly,
+    date: '2026-01-15',
+    method: 'mobile_money',
+    reference: 'OM-992341',
+    notes: 'Échéance 1 — PEINTURE FLEX',
+    createdAt: '2026-01-15T14:10:00'
   },
   {
-    id: 'AC-2026-008', clientId: 'c1', clientName: 'Hôtel Kaloum', quoteId: 'DV-2026-031',
-    amount: FLAGSHIP_PLAN.subscription, date: '2025-12-15', method: 'virement', reference: 'VIR-88421',
-    notes: 'Abonnement FLEX — garantie de prestation (banque)', createdAt: '2025-12-15T09:24:00'
+    id: 'AC-2026-008',
+    clientId: 'c1',
+    clientName: 'Hôtel Kaloum',
+    quoteId: 'DV-2026-031',
+    amount: FLAGSHIP_PLAN.subscription,
+    date: '2025-12-15',
+    method: 'virement',
+    reference: 'VIR-88421',
+    notes: 'Abonnement FLEX — garantie de prestation (banque)',
+    createdAt: '2025-12-15T09:24:00'
   },
   {
-    id: 'AC-2026-003', clientId: 'c4', clientName: 'Amadou Diallo', quoteId: 'DV-2026-024',
-    amount: 1850000, date: '2026-01-18', method: 'cheque', reference: 'CHQ-4521',
-    notes: 'Paiement total', createdAt: '2026-01-18T11:00:00'
+    id: 'AC-2026-003',
+    clientId: 'c4',
+    clientName: 'Amadou Diallo',
+    quoteId: 'DV-2026-024',
+    amount: 1850000,
+    date: '2026-01-18',
+    method: 'cheque',
+    reference: 'CHQ-4521',
+    notes: 'Paiement total',
+    createdAt: '2026-01-18T11:00:00'
   }
 ];
 
 const CHANTIERS = [
   {
-    id: 'CH-2026-006', name: 'Hôtel Kaloum — 12 chambres', clientId: 'c1', clientName: 'Hôtel Kaloum',
-    city: 'Kaloum, Conakry', quoteId: 'DV-2026-031', budget: 12500000, spent: 6100000,
-    progress: 68, status: 'en_cours', startDate: '2026-01-18', endDate: '2026-03-05',
-    chef: 'Mamadou Saliou', team: 8, tasks: ['Préparation des supports', 'Mastic et ponçage', 'Sous-couche', '2 couches FOM mat', 'Finitions et nettoyage']
+    id: 'CH-2026-006',
+    name: 'Hôtel Kaloum — 12 chambres',
+    clientId: 'c1',
+    clientName: 'Hôtel Kaloum',
+    city: 'Kaloum, Conakry',
+    quoteId: 'DV-2026-031',
+    budget: 12500000,
+    spent: 6100000,
+    progress: 68,
+    status: 'en_cours',
+    startDate: '2026-01-18',
+    endDate: '2026-03-05',
+    chef: 'Mamadou Saliou',
+    team: 8,
+    tasks: [
+      'Préparation des supports',
+      'Mastic et ponçage',
+      'Sous-couche',
+      '2 couches FOM mat',
+      'Finitions et nettoyage'
+    ]
   },
   {
-    id: 'CH-2026-005', name: 'Villa Ratoma — R+1', clientId: 'c2', clientName: 'Villa Ratoma',
-    city: 'Ratoma, Conakry', quoteId: 'DV-2026-030', budget: 8750000, spent: 2600000,
-    progress: 35, status: 'en_cours', startDate: '2026-02-02', endDate: '2026-03-20',
-    chef: 'Abdoulaye Camara', team: 5, tasks: ['Mastic', 'Sous-couche', 'Peinture satin', 'Boiseries']
+    id: 'CH-2026-005',
+    name: 'Villa Ratoma — R+1',
+    clientId: 'c2',
+    clientName: 'Villa Ratoma',
+    city: 'Ratoma, Conakry',
+    quoteId: 'DV-2026-030',
+    budget: 8750000,
+    spent: 2600000,
+    progress: 35,
+    status: 'en_cours',
+    startDate: '2026-02-02',
+    endDate: '2026-03-20',
+    chef: 'Abdoulaye Camara',
+    team: 5,
+    tasks: ['Mastic', 'Sous-couche', 'Peinture satin', 'Boiseries']
   },
   {
-    id: 'CH-2026-004', name: 'Pharmacie Madina — local commercial', clientId: 'c8', clientName: 'Pharmacie Madina',
-    city: 'Madina, Conakry', quoteId: 'DV-2026-024', budget: 1850000, spent: 1520000,
-    progress: 82, status: 'en_cours', startDate: '2026-01-20', endDate: '2026-02-18',
-    chef: 'Fatou Bintou Sylla', team: 3, tasks: ['Préparation', 'Peinture brillant', 'Enseigne et retouches']
+    id: 'CH-2026-004',
+    name: 'Pharmacie Madina — local commercial',
+    clientId: 'c8',
+    clientName: 'Pharmacie Madina',
+    city: 'Madina, Conakry',
+    quoteId: 'DV-2026-024',
+    budget: 1850000,
+    spent: 1520000,
+    progress: 82,
+    status: 'en_cours',
+    startDate: '2026-01-20',
+    endDate: '2026-02-18',
+    chef: 'Fatou Bintou Sylla',
+    team: 3,
+    tasks: ['Préparation', 'Peinture brillant', 'Enseigne et retouches']
   },
   {
-    id: 'CH-2026-003', name: 'Résidence Koloma — halls A et B', clientId: 'c7', clientName: 'Résidence Koloma',
-    city: 'Koloma, Conakry', quoteId: 'DV-2026-025', budget: 2400000, spent: 2400000,
-    progress: 100, status: 'termine', startDate: '2025-12-01', endDate: '2026-01-12',
-    chef: 'Mamadou Saliou', team: 4, tasks: ['Halls', 'Escaliers', 'Nettoyage final']
+    id: 'CH-2026-003',
+    name: 'Résidence Koloma — halls A et B',
+    clientId: 'c7',
+    clientName: 'Résidence Koloma',
+    city: 'Koloma, Conakry',
+    quoteId: 'DV-2026-025',
+    budget: 2400000,
+    spent: 2400000,
+    progress: 100,
+    status: 'termine',
+    startDate: '2025-12-01',
+    endDate: '2026-01-12',
+    chef: 'Mamadou Saliou',
+    team: 4,
+    tasks: ['Halls', 'Escaliers', 'Nettoyage final']
   },
   {
-    id: 'CH-2026-007', name: 'Immeuble Kipé — 3 niveaux', clientId: 'c5', clientName: 'Ibrahima Sow',
-    city: 'Kipé, Conakry', quoteId: 'DV-2026-027', budget: 3200000, spent: 0,
-    progress: 0, status: 'planifie', startDate: '2026-03-02', endDate: '2026-04-15',
-    chef: 'Abdoulaye Camara', team: 6, tasks: ['Installation chantier', 'Mastic', 'Peinture', 'Réception']
+    id: 'CH-2026-007',
+    name: 'Immeuble Kipé — 3 niveaux',
+    clientId: 'c5',
+    clientName: 'Ibrahima Sow',
+    city: 'Kipé, Conakry',
+    quoteId: 'DV-2026-027',
+    budget: 3200000,
+    spent: 0,
+    progress: 0,
+    status: 'planifie',
+    startDate: '2026-03-02',
+    endDate: '2026-04-15',
+    chef: 'Abdoulaye Camara',
+    team: 6,
+    tasks: ['Installation chantier', 'Mastic', 'Peinture', 'Réception']
   },
   {
-    id: 'CH-2026-002', name: 'Bah Peinture Pro — dépôt Kindia', clientId: 'c6', clientName: 'Mariama Bah',
-    city: 'Kindia', quoteId: 'DV-2026-026', budget: 2750000, spent: 2750000,
-    progress: 100, status: 'termine', startDate: '2025-11-10', endDate: '2025-12-20',
-    chef: 'Fatou Bintou Sylla', team: 2, tasks: ['Aménagement dépôt', 'Peinture', 'Livraison']
+    id: 'CH-2026-002',
+    name: 'Bah Peinture Pro — dépôt Kindia',
+    clientId: 'c6',
+    clientName: 'Mariama Bah',
+    city: 'Kindia',
+    quoteId: 'DV-2026-026',
+    budget: 2750000,
+    spent: 2750000,
+    progress: 100,
+    status: 'termine',
+    startDate: '2025-11-10',
+    endDate: '2025-12-20',
+    chef: 'Fatou Bintou Sylla',
+    team: 2,
+    tasks: ['Aménagement dépôt', 'Peinture', 'Livraison']
   }
 ];
 
@@ -752,22 +1105,43 @@ const DRAFT_QUOTE = {
   clientName: 'Mme Camara',
   productId: 'p1',
   finish: 'Finition mate • Blanc Cassé',
-  rooms: [
-    { id: 'r1', name: 'Salon', length: 5.2, width: 6.0, height: 3.0, doors: 2, windows: 3 }
-  ],
-  assumptions: { rendement: 10, coats: 2, waste: 0.10, laborPrice: 30000, transport: 250000, tvaRate: 0.18, tvaEnabled: true },
+  rooms: [{ id: 'r1', name: 'Salon', length: 5.2, width: 6.0, height: 3.0, doors: 2, windows: 3 }],
+  assumptions: {
+    rendement: 10,
+    coats: 2,
+    waste: 0.1,
+    laborPrice: 30000,
+    transport: 250000,
+    tvaRate: 0.18,
+    tvaEnabled: true
+  },
   lines: [
     {
-      icon: 'paint', designation: 'Peinture intérieure', detail: 'Finition mate • Blanc Cassé',
-      qty: 36, unit: 'L', unitPrice: 75000, amount: 2700000
+      icon: 'paint',
+      designation: 'Peinture intérieure',
+      detail: 'Finition mate • Blanc Cassé',
+      qty: 36,
+      unit: 'L',
+      unitPrice: 75000,
+      amount: 2700000
     },
     {
-      icon: 'labor', designation: 'Main-d’œuvre', detail: 'Application (2 couches)',
-      qty: 104.4, unit: 'm²', unitPrice: 30000, amount: 3132000
+      icon: 'labor',
+      designation: 'Main-d’œuvre',
+      detail: 'Application (2 couches)',
+      qty: 104.4,
+      unit: 'm²',
+      unitPrice: 30000,
+      amount: 3132000
     },
     {
-      icon: 'transport', designation: 'Transport', detail: 'Livraison sur site',
-      qty: 1, unit: 'forfait', unitPrice: 250000, amount: 250000
+      icon: 'transport',
+      designation: 'Transport',
+      detail: 'Livraison sur site',
+      qty: 1,
+      unit: 'forfait',
+      unitPrice: 250000,
+      amount: 250000
     }
   ],
   surface: 104.4,
@@ -815,7 +1189,17 @@ const PORTAL_BOOKINGS = [
 ];
 
 module.exports = {
-  COMPANY, USERS, PRODUCTS, CLIENTS, QUOTES, PAYMENTS, CHANTIERS, DRAFT_QUOTE,
-  CLIENT_ORDERS, PORTAL_BOOKINGS,
-  buildQuoteLines, defaultSchedule, buildCalendar
+  COMPANY,
+  USERS,
+  PRODUCTS,
+  CLIENTS,
+  QUOTES,
+  PAYMENTS,
+  CHANTIERS,
+  DRAFT_QUOTE,
+  CLIENT_ORDERS,
+  PORTAL_BOOKINGS,
+  buildQuoteLines,
+  defaultSchedule,
+  buildCalendar
 };

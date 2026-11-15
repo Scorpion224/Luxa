@@ -17,39 +17,51 @@ const ROLE_SUMMARY = {
   commercial: 'Prospection et vente : devis, clients, consultation du catalogue, planning des équipes.',
   comptable: 'Encaissements et suivi financier : paiements, factures, synthèse financière.',
   stockiste: 'Gestion du magasin : niveaux de stock, ajustements et catalogue produits.',
-  client: 'Espace client : demande de devis, boutique et panier, financement PEINTURE FLEX et réservation d’une équipe.'
+  client:
+    'Espace client : demande de devis, boutique et panier, financement PEINTURE FLEX et réservation d’une équipe.'
 };
 
 const ROLE_PERMISSIONS = {
   admin: ['*'],
   commercial: [
-    'devis:read', 'devis:write',
+    'devis:read',
+    'devis:write',
     'catalogue:read',
-    'clients:read', 'clients:write',
+    'clients:read',
+    'clients:write',
     'chantiers:read',
     'paiement:read',
-    'planning:read', 'planning:manage',
-    'commande:read', 'commande:write'
+    'planning:read',
+    'planning:manage',
+    'commande:read',
+    'commande:write'
   ],
   comptable: [
     'devis:read',
     'clients:read',
     'chantiers:read',
-    'paiement:read', 'paiement:write',
-    'finance:read', 'finance:write',
+    'paiement:read',
+    'paiement:write',
+    'finance:read',
+    'finance:write',
     'planning:read',
     'commande:read'
   ],
   stockiste: [
-    'catalogue:read', 'catalogue:write',
-    'stocks:read', 'stocks:write',
+    'catalogue:read',
+    'catalogue:write',
+    'stocks:read',
+    'stocks:write',
     'chantiers:read',
-    'commande:read', 'commande:write'
+    'commande:read',
+    'commande:write'
   ],
   client: [
     'portail:read',
-    'boutique:read', 'panier:write',
-    'commande:write', 'commande:read',
+    'boutique:read',
+    'panier:write',
+    'commande:write',
+    'commande:read',
     'demande:write',
     'reservation:write'
   ]
@@ -86,6 +98,11 @@ function canAccessModule(role, moduleKey) {
 }
 
 module.exports = {
-  ROLE_LABEL, ROLE_SUMMARY, ROLE_PERMISSIONS, MODULES,
-  permissionsFor, can, canAccessModule
+  ROLE_LABEL,
+  ROLE_SUMMARY,
+  ROLE_PERMISSIONS,
+  MODULES,
+  permissionsFor,
+  can,
+  canAccessModule
 };

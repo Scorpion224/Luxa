@@ -42,7 +42,10 @@ function addMonths(iso, months) {
 function buildFlexPlan(total, months, opts) {
   const options = opts || {};
   const gross = Math.max(0, Math.round(Number(total) || 0));
-  const duration = Math.min(FLEX.maxMonths, Math.max(FLEX.minMonths, Math.round(Number(months) || FLEX.minMonths)));
+  const duration = Math.min(
+    FLEX.maxMonths,
+    Math.max(FLEX.minMonths, Math.round(Number(months) || FLEX.minMonths))
+  );
   const subscription = Math.min(FLEX.subscription, gross);
   const financed = Math.max(0, gross - subscription);
   const interest = Math.round(financed * FLEX.monthlyRate * duration);
@@ -50,14 +53,16 @@ function buildFlexPlan(total, months, opts) {
   const monthly = duration ? Math.round(totalCredit / duration) : 0;
 
   const start = isoDate(options.startDate || Date.now());
-  const schedule = [{
-    id: 'f0',
-    kind: 'subscription',
-    step: 'Abonnement FLEX (banque)',
-    amount: subscription,
-    dueDate: start,
-    status: 'a_venir'
-  }];
+  const schedule = [
+    {
+      id: 'f0',
+      kind: 'subscription',
+      step: 'Abonnement FLEX (banque)',
+      amount: subscription,
+      dueDate: start,
+      status: 'a_venir'
+    }
+  ];
 
   let rest = totalCredit;
   for (let i = 1; i <= duration; i++) {
