@@ -1710,3 +1710,27 @@ tr.row-selected { background: #f7fbf8; }
 }
 .quote-note i { color: #a9b4b1; margin-top: 2px; }
 .field.mb { margin-bottom: 12px; }
+
+.pay-lock {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  background: #fdfaf5;
+  border: 1px dashed var(--line);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #6d7b7a;
+}
+.pay-lock i { color: #b8928a; margin-top: 2px; }
+.pay-lock strong { color: #16323a; }
+
+.pay-row-locked { cursor: default; }
+.pay-row-locked:hover td { background: transparent; }
+.pay-row-locked td { color: #8b9795; }
+.row-lock { font-size: 9px; color: #b8928a; margin-left: 2px; }
+
+.user-menu-item.client-preview { color: #0c5e62; white-space: nowrap; }
+.user-menu-item.client-preview:hover { background: #eff5f0; }
+.user-menu-item.client-preview .demo-tag { margin-left: auto; }

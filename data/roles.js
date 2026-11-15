@@ -29,7 +29,7 @@ const ROLE_PERMISSIONS = {
     'chantiers:read',
     'paiement:read',
     'planning:read', 'planning:manage',
-    'commande:read'
+    'commande:read', 'commande:write'
   ],
   comptable: [
     'devis:read',
@@ -44,7 +44,7 @@ const ROLE_PERMISSIONS = {
     'catalogue:read', 'catalogue:write',
     'stocks:read', 'stocks:write',
     'chantiers:read',
-    'commande:read'
+    'commande:read', 'commande:write'
   ],
   client: [
     'portail:read',
@@ -67,6 +67,7 @@ const MODULES = [
   { key: 'chantiers', label: 'Chantiers', read: 'chantiers:read' },
   { key: 'finance', label: 'Finance', read: 'finance:read' },
   { key: 'paiement', label: 'Parcours de paiement', read: 'paiement:read' },
+  { key: 'commandes', label: 'Commandes', read: 'commande:read' },
   { key: 'planning', label: 'Planning', read: 'planning:read' }
 ];
 

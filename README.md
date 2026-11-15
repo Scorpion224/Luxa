@@ -79,6 +79,7 @@ est un jeton de démonstration : ce dispositif n'est pas prévu pour la producti
 | Stocks | `#/stocks` | Valorisation, alertes, niveaux de stock, ajustement rapide |
 | Chantiers | `#/chantiers` | Avancement, budgets, chefs de chantier, création |
 | Finance | `#/finance` | Encaissements, factures, synthèse, graphique 6 mois |
+| Commandes boutique | `#/commandes` | Commandes passées depuis l'espace client (espèces / FLEX), KPI, marquage « livrée » |
 | Planning des équipes | `#/planning` | Demandes de rendez-vous à confirmer, occupation des 14 prochains jours, équipes peintres |
 | Boutique (client) | `#/boutique` | Catalogue, recherche, familles, bouton « Ajouter au panier », total du panier |
 | Mon panier (client) | `#/panier` | Quantités, suppression, récapitulatif, commande **Cash** ou **PEINTURE FLEX** |
@@ -117,6 +118,13 @@ Défini dans `data/flex.js`, appliqué par l'API et l'écran « Parcours de paie
    même sur toute la durée, la dernière échéance absorbe l'arrondi.
 4. **Prestation offerte** — une fois le dossier validé, la peinture est offerte
    (mention affichée dans le bloc de conditions).
+5. **Paiement par échéance réservé à PEINTURE FLEX** — seuls les devis ayant
+   accès à la formule (échéancier FLEX mis en place) peuvent être réglés échéance
+   par échéance : les lignes de l'échéancier sont cliquables, sinon elles portent
+   un cadenas et l'API refuse tout `stepId` (`400`). Tant que la banque n'a pas
+   validé, seul l'abonnement est réglable ; les échéances de crédit restent
+   verrouillées. Pour les autres devis, le règlement est libre (acompte, partiel,
+   solde) via « Encaisser ».
 
 Exemple (DV-2026-031, 12 500 000 GNF sur 5 mois) : abonnement 250 000,
 financé 12 250 000, intérêts 612 500, mensualité **2 572 500**, total
@@ -155,6 +163,10 @@ et **Ma peinture**. Un lien compte pour chaque étape :
    dans « Planning des équipes » (`PATCH /api/bookings/:id`, permission
    `planning:manage`). Une équipe mobilisée disparaît des créneaux libres ; une
    fois toutes les équipes prises, le créneau est complet.
+
+Un administrateur peut ouvrir l'espace client sans changer de compte : menu du
+compte → **« Espace client »** (aperçu de démonstration, connecté au compte client
+de démonstration).
 
 Données de démonstration : 3 équipes (Équipe FOM 1 — Mamadou Saliou, 8 peintres ;
 Équipe FLEX 2 — Abdoulaye Camara, 5 peintres ; Équipe Satin 3 — Fatou Bangoura,
@@ -196,6 +208,7 @@ Endpoints : `GET /api/portal/me`, `GET|POST|PATCH|DELETE /api/cart*`,
 | GET | `/api/portal/me` | Espace client : fiche, panier, devis, commandes, rendez-vous, équipes |
 | GET/POST/PATCH/DELETE | `/api/cart` · `/api/cart/items[/:productId]` | Panier du client connecté |
 | GET/POST | `/api/orders` | Commandes du client (`mode: "cash"` ou `"flex"`) |
+| PATCH | `/api/orders/:id` | Statut d'une commande (`a_preparer`, `livree`, `annulee`) — personnel |
 | POST | `/api/portal/quotes` | Demande de devis « peindre ma maison » |
 | POST | `/api/portal/flex` | Demande de financement PEINTURE FLEX `{ quoteId, months }` |
 | POST | `/api/portal/financing/:id/advance` | Avancement du dossier du client |

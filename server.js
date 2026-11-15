@@ -370,6 +370,23 @@ app.get('/api/orders', (req, res) => {
   res.json(all ? db.orders : mine);
 });
 
+app.patch('/api/orders/:id', requirePermission('commande:write'), (req, res) => {
+  const user = currentUser(req);
+  if (!user || user.role === 'client') {
+    return res.status(403).json({ error: 'Action réservée à l’équipe commerciale' });
+  }
+  const order = db.orders.find((o) => o.id === req.params.id);
+  if (!order) return res.status(404).json({ error: 'Commande non trouvée' });
+  const status = (req.body || {}).status;
+  if (!['a_preparer', 'en_financement', 'livree', 'annulee'].includes(status)) {
+    return res.status(400).json({ error: 'Statut de commande invalide' });
+  }
+  order.status = status;
+  if (status === 'livree') order.deliveredAt = new Date().toISOString().slice(0, 10);
+  save();
+  res.json(order);
+});
+
 /* Demande de devis « peindre ma maison » */
 app.post('/api/portal/quotes', requirePermission('demande:write'), (req, res) => {
   const body = req.body || {};
@@ -429,6 +446,9 @@ app.post('/api/portal/flex', requirePermission('demande:write'), (req, res) => {
   }
   const months = Math.min(flex.FLEX.maxMonths, Math.max(flex.FLEX.minMonths, Math.round(Number((req.body || {}).months) || 6)));
   const plan = flex.buildFlexPlan(quote.total, months);
+  if (!(quote.schedule || []).some((s) => s.status === 'paye')) {
+    quote.schedule = plan.schedule;
+  }
   quote.flex = {
     months: plan.months,
     rate: plan.rate,
@@ -928,6 +948,8 @@ function paymentSummary(quote) {
     financing: quote.financing || null,
     flex: quote.flex || null,
     bankValidated: flex.isBankValidated(quote),
+    flexAccess: !!quote.flex,
+    installmentAllowed: !!quote.flex,
     paidTotal,
     paidSteps: paidSteps.length,
     remaining,
@@ -961,6 +983,18 @@ app.post('/api/payments/:quoteId/pay', requirePermission('paiement:write'), (req
   const body = req.body || {};
   const amount = Number(body.amount);
   if (!amount || amount <= 0) return res.status(400).json({ error: 'Montant invalide' });
+  const step = (quote.schedule || []).find((s) => s.id === body.stepId);
+  if (body.stepId && !step) {
+    return res.status(400).json({ error: 'Échéance inconnue' });
+  }
+  if (step && !quote.flex) {
+    return res.status(400).json({
+      error: 'Le paiement par échéance est réservé aux devis ayant accès à la formule PEINTURE FLEX'
+    });
+  }
+  if (step && step.kind === 'installment' && !flex.isBankValidated(quote)) {
+    return res.status(400).json({ error: 'Le dossier bancaire doit être validé avant de régler les échéances de crédit' });
+  }
   const client = db.clients.find((c) => c.id === quote.clientId);
   const payment = {
     id: `AC-2026-${String(db.counters.payment++).padStart(3, '0')}`,
@@ -976,10 +1010,6 @@ app.post('/api/payments/:quoteId/pay', requirePermission('paiement:write'), (req
     createdAt: new Date().toISOString()
   };
   db.payments.unshift(payment);
-  const step = (quote.schedule || []).find((s) => s.id === body.stepId);
-  if (step && step.kind === 'installment' && !flex.isBankValidated(quote)) {
-    return res.status(400).json({ error: 'Le dossier bancaire doit être validé avant de régler les échéances de crédit' });
-  }
   if (step) {
     if (step.amount === null) {
       step.amount = amount;

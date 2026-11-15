@@ -136,7 +136,8 @@
     boutique: 'boutique:read',
     panier: 'panier:write',
     'ma-peinture': 'portail:read',
-    planning: 'planning:read'
+    planning: 'planning:read',
+    commandes: 'commande:read'
   };
   const ROUTE_MODULE = {
     devis: 'devis',
@@ -150,7 +151,8 @@
     boutique: 'boutique',
     panier: 'panier',
     'ma-peinture': 'ma-peinture',
-    planning: 'planning'
+    planning: 'planning',
+    commandes: 'commandes'
   };
 
   function loadSession() {
@@ -189,7 +191,7 @@
     return true;
   }
   function firstAllowedRoute() {
-    const order = ['boutique', 'panier', 'ma-peinture', 'devis', 'catalogue', 'clients', 'stocks', 'chantiers', 'finance', 'paiement', 'planning'];
+    const order = ['boutique', 'panier', 'ma-peinture', 'devis', 'catalogue', 'clients', 'stocks', 'chantiers', 'finance', 'paiement', 'commandes', 'planning'];
     return order.find((r) => canRoute(r)) || 'devis';
   }
 
@@ -425,6 +427,9 @@
         '<div class="user-menu-mail">' + esc(user.email) + '</div>' +
         '<div class="user-menu-role">' + esc(user.roleLabel || user.role) + '</div></div>' +
       '</div>' +
+      (user.role === 'admin'
+        ? '<button class="user-menu-item client-preview" data-action="preview-client"><i class="fa-solid fa-store"></i> Espace client <span class="demo-tag">Démo</span></button>'
+        : '') +
       '<button class="user-menu-item" data-action="sign-out"><i class="fa-solid fa-arrow-right-from-bracket"></i> Se déconnecter</button>';
     document.querySelector('.topbar').appendChild(menu);
     menu.addEventListener('click', (e) => {
@@ -882,18 +887,26 @@
     return paymentFlex(data, options);
   }
 
-  function scheduleRows(schedule) {
+  function scheduleRows(schedule, data) {
     if (!schedule || !schedule.length) return emptyState('fa-calendar-xmark', 'Aucune échéance planifiée');
-    return schedule.map((s) => (
-      '<tr class="pay-row" data-action="payment-step" data-step="' + esc(s.id) + '" title="Enregistrer le paiement">' +
+    const flexAccess = !data || data.flexAccess !== false;
+    const bankOk = !data || data.bankValidated !== false;
+    return schedule.map((s) => {
+      const payable = flexAccess && (s.kind !== 'installment' || bankOk) && s.status !== 'paye';
+      const attrs = payable ? ' data-action="payment-step" data-step="' + esc(s.id) + '" title="Enregistrer le paiement"' : '';
+      const lockedRow = !payable && s.status !== 'paye' && (s.kind === 'installment' ? !bankOk : !flexAccess);
+      return (
+      '<tr class="pay-row' + (payable ? '' : ' pay-row-locked') + '"' + attrs + '>' +
         '<td><span class="step-name"><span class="step-icon ' + s.status + '">' +
           '<i class="fa-solid ' + (s.status === 'paye' ? 'fa-check' : s.status === 'en_retard' ? 'fa-exclamation' : s.status === 'a_valider' ? 'fa-clock' : 'fa-ellipsis') + '"></i>' +
         '</span>' + esc(s.step) + '</span></td>' +
         '<td class="num">' + (s.amount ? money(s.amount) : '—') + '</td>' +
         '<td class="num">' + (s.dueDate ? dateFr(s.dueDate) : '—') + '</td>' +
-        '<td>' + badge(s.status, s.status === 'paye' ? 'Payé' : s.status === 'en_retard' ? 'En retard' : s.status === 'a_valider' ? 'À valider' : s.status === 'a_venir' ? 'À venir' : 'En attente') + '</td>' +
+        '<td>' + badge(s.status, s.status === 'paye' ? 'Payé' : s.status === 'en_retard' ? 'En retard' : s.status === 'a_valider' ? 'À valider' : s.status === 'a_venir' ? 'À venir' : 'En attente') +
+          (lockedRow ? ' <i class="fa-solid fa-lock row-lock" title="Paiement par échéance indisponible"></i>' : '') + '</td>' +
       '</tr>'
-    )).join('');
+      );
+    }).join('');
   }
 
   function timelineMarkup(financing) {
@@ -974,8 +987,11 @@
           ((data.schedule && data.schedule.length)
             ? '<table class="data">' +
                 '<thead><tr><th>Étape</th><th>Montant</th><th>Échéance</th><th>Statut</th></tr></thead>' +
-                '<tbody>' + scheduleRows(data.schedule) + '</tbody>' +
-              '</table>'
+                '<tbody>' + scheduleRows(data.schedule, data) + '</tbody>' +
+              '</table>' +
+              (plan ? '' : '<div class="pay-lock" style="margin:12px 16px 16px"><i class="fa-solid fa-lock"></i>' +
+                '<span>Ce devis n’a pas accès à la formule <strong>PEINTURE FLEX</strong> : les échéances ne sont pas réglables une à une. ' +
+                'Utilisez « Encaisser » pour un acompte, un paiement partiel ou le solde.</span></div>')
             : flexSetup(data)) +
         '</div>' +
         '<div class="remaining-box' + (can('paiement:write') && !locked ? ' clickable' : '') + '"' +
@@ -1523,7 +1539,11 @@
     const p = prefill || {};
     const quoteId = p.quoteId || state.payment.quoteId || '';
     api('/api/payments/' + encodeURIComponent(quoteId)).then((data) => {
-      const openSteps = (data.schedule || []).filter((s) => s.status !== 'paye');
+      const flexAccess = !!data.flexAccess;
+      const bankOk = !!data.bankValidated;
+      const openSteps = flexAccess
+        ? (data.schedule || []).filter((s) => s.status !== 'paye' && (bankOk || s.kind !== 'installment'))
+        : [];
       const stepOptions = openSteps.map((s) =>
         '<option value="' + esc(s.id) + '" data-amount="' + (s.amount || 0) + '">' + esc(s.step) + (s.amount ? ' — ' + money(s.amount) : '') + '</option>'
       ).join('');
@@ -1538,6 +1558,15 @@
           '</select></div>' +
           '<div class="field"><label>Référence</label><input class="input" id="pRef" placeholder="N° transaction"></div>' +
           (stepOptions ? '<div class="field span-2"><label>Échéance concernée</label><select class="select" id="pStep">' + stepOptions + '</select></div>' : '') +
+          (!flexAccess
+            ? '<div class="field span-2"><div class="pay-lock"><i class="fa-solid fa-lock"></i>' +
+              '<span>Le <strong>paiement par échéance</strong> est réservé aux devis ayant accès à la formule <strong>PEINTURE FLEX</strong>. ' +
+              'Pour ce devis, le règlement est libre : acompte, paiement partiel ou solde.</span></div></div>'
+            : (bankOk || stepOptions ? '' : '<div class="field span-2"><div class="pay-lock"><i class="fa-solid fa-hourglass-half"></i>' +
+              '<span>L’<strong>échéancier FLEX</strong> s’ouvre à la validation du dossier par la banque.</span></div></div>')) +
+          (flexAccess && !bankOk && stepOptions ? '<div class="field span-2"><div class="pay-lock"><i class="fa-solid fa-hourglass-half"></i>' +
+            '<span>Seul l’<strong>abonnement FLEX</strong> est réglable pour l’instant : les échéances de crédit s’ouvrent ' +
+            'après la validation du dossier par la banque.</span></div></div>' : '') +
           '<div class="field span-2"><label>Notes</label><textarea class="input" id="pNotes" rows="2"></textarea></div>' +
         '</div></div>' +
         '<div class="modal-foot"><button class="btn btn-ghost" data-action="modal-close">Annuler</button>' +
@@ -1584,6 +1613,13 @@
     'modal-close'() { closeModal(); },
     'new-quote'() { go('devis/nouveau'); },
     'open-register'() { openRegisterModal(); },
+    'preview-client'() {
+      closeUserMenu();
+      closeModal();
+      signIn('client@peinturepro.gn', 'client123')
+        .then(() => { location.hash = '#/ma-peinture'; })
+        .catch((err) => toast(err.message, 'error'));
+    },
     'shop-category'(el) {
       portalState().category = el.dataset.category;
       render();
@@ -1639,6 +1675,7 @@
     'portal-financing-send'(el) { advanceFinancing(el.dataset.quote, 'Dossier transmis à la banque'); },
     'portal-financing-decide'(el) { advanceFinancing(el.dataset.quote, 'Décision de la banque enregistrée'); },
     'planning-decide'(el) { decideBooking(el.dataset.id, el.dataset.status); },
+    'order-status'(el) { setOrderStatus(el.dataset.id, el.dataset.status); },
     'catalogue-category'(el) {
       state.catalogue.category = el.dataset.category;
       state.catalogue.search = '';
@@ -2677,6 +2714,17 @@
     }
   }
 
+  async function setOrderStatus(id, status) {
+    try {
+      await api('/api/orders/' + encodeURIComponent(id), { method: 'PATCH', body: { status: status } });
+      portalState().me = null;
+      toast('Commande ' + id + ' marquée livrée');
+      render();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
   function openRegisterModal() {
     const zones = ['Kaloum', 'Dixinn', 'Matam', 'Ratoma', 'Matoto'];
     openModal(
@@ -2730,6 +2778,61 @@
     });
   }
 
+  /* ---------------------------------------------------------------------- */
+  /* Page — Commandes boutique (personnel)                                */
+  /* ---------------------------------------------------------------------- */
+  async function renderCommandes() {
+    const orders = await api('/api/orders');
+    const count = (status) => orders.filter((o) => o.status === status).length;
+    const cash = orders.filter((o) => o.mode === 'cash').reduce((sum, o) => sum + o.total, 0);
+    const flex = orders.filter((o) => o.mode === 'flex').reduce((sum, o) => sum + o.total, 0);
+    const canDecide = can('commande:write') && !isClientUser();
+
+    const rows = orders.map((o) => {
+      const items = (o.items || []).map((i) => esc(i.name) + ' × ' + i.qty).join(' · ');
+      return '<tr>' +
+        '<td class="quote-row-id">' + esc(o.id) + '</td>' +
+        '<td>' + dateShort(o.createdAt) + '</td>' +
+        '<td><div class="quote-row-client">' + esc(o.clientName) + '</div>' +
+          '<div class="line-detail">' + (o.mode === 'flex' ? 'PEINTURE FLEX' : 'Espèces') + '</div></td>' +
+        '<td><div class="order-items">' + (items || '—') + '</div></td>' +
+        '<td class="num strong">' + money(o.total) + '</td>' +
+        '<td>' + badge(o.status === 'livree' ? 'accepte' : o.status === 'annulee' ? 'refuse' : 'envoye',
+          ORDER_LABEL[o.status] || o.status) + '</td>' +
+        '<td class="num">' + (canDecide && o.status !== 'livree'
+          ? '<button class="btn btn-ghost btn-xs" data-action="order-status" data-id="' + esc(o.id) + '" data-status="livree">' +
+            '<i class="fa-solid fa-truck-fast"></i> Marquer livrée</button>'
+          : '<span class="muted">' + (o.deliveredAt ? 'Livrée le ' + dateShort(o.deliveredAt) : '—') + '</span>') + '</td>' +
+      '</tr>';
+    }).join('');
+
+    return pageHead({
+      title: 'Commandes boutique',
+      sub: 'Commandes passées depuis l’espace client, en espèces ou avec PEINTURE FLEX.'
+    }) +
+    '<div class="page-body">' +
+      '<div class="kpis k-equal">' +
+        '<div class="kpi"><div class="kpi-icon teal"><i class="fa-solid fa-box"></i></div><div>' +
+          '<div class="kpi-label">Commandes</div><div class="kpi-value">' + orders.length + '</div></div></div>' +
+        '<div class="kpi"><div class="kpi-icon orange"><i class="fa-solid fa-money-bill-wave"></i></div><div>' +
+          '<div class="kpi-label">En espèces</div><div class="kpi-value sm">' + money(cash) + '</div></div></div>' +
+        '<div class="kpi"><div class="kpi-icon rust"><i class="fa-solid fa-star"></i></div><div>' +
+          '<div class="kpi-label">PEINTURE FLEX</div><div class="kpi-value sm">' + money(flex) + '</div></div></div>' +
+        '<div class="kpi green-tint"><div class="kpi-icon green"><i class="fa-solid fa-truck-fast"></i></div><div>' +
+          '<div class="kpi-label">Livrées</div><div class="kpi-value">' + count('livree') + '</div></div></div>' +
+      '</div>' +
+      '<div class="card"><div class="card-head"><span class="card-icon"><i class="fa-solid fa-basket-shopping"></i></span>' +
+        '<span class="card-title">Toutes les commandes</span>' +
+        '<span class="card-sub">' + count('a_preparer') + ' à préparer · ' + count('en_financement') + ' en financement</span></div>' +
+        '<div class="card-body no-pad">' +
+          (orders.length
+            ? '<table class="data"><thead><tr><th>Réf.</th><th>Date</th><th>Client</th><th>Articles</th>' +
+              '<th class="num">Total</th><th>Statut</th><th class="num">Action</th></tr></thead><tbody>' + rows + '</tbody></table>'
+            : emptyState('fa-box', 'Aucune commande pour le moment')) +
+        '</div></div>' +
+    '</div>';
+  }
+
   const pages = {
     devis: renderDevis,
     'devis/nouveau': renderNouveauDevis,
@@ -2739,6 +2842,7 @@
     chantiers: renderChantiers,
     finance: renderFinance,
     paiement: renderPaiement,
+    commandes: renderCommandes,
     boutique: renderBoutique,
     panier: renderPanier,
     'ma-peinture': renderMaPeinture,
