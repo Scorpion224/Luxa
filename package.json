@@ -1,0 +1,23 @@
+{
+  "name": "peinture-pro-guinee",
+  "version": "2.0.0",
+  "description": "Application complète de gestion commerciale — Peinture Pro Guinée",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "peinture",
+    "devis",
+    "guinee",
+    "gestion"
+  ],
+  "author": "Peinture Pro Guinée",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.22.3",
+    "uuid": "^10.0.0"
+  }
+}
