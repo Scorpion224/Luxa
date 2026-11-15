@@ -814,9 +814,12 @@ app.post('/api/auth/logout', (req, res) => {
 });
 
 app.get('/api/auth/me', (req, res) => {
+  const sent = tokenOf(req);
   const user = currentUser(req);
+  // Visiteur sans jeton : réponse neutre (pas d'erreur dans la console du navigateur).
+  if (!sent) return res.json({ token: null, user: null });
   if (!user) return res.status(401).json({ error: 'Session expirée' });
-  res.json({ token: tokenOf(req), user: publicUser(user) });
+  res.json({ token: sent, user: publicUser(user) });
 });
 
 app.get('/api/categories', (req, res) => {
