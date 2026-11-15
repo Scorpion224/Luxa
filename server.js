@@ -19,6 +19,7 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 app.use(express.static(PUBLIC_DIR, {
   extensions: ['html'],
   setHeaders(res, filePath) {
@@ -706,30 +707,68 @@ app.get('/api/users/:id', requirePermission('utilisateurs:read'), (req, res) => 
   res.json(publicUser(user));
 });
 
+function authenticate(email, password) {
+  const known = db.users.find((u) => String(u.email || '').toLowerCase() === email);
+  const demoAccount = seed.USERS.find((u) => String(u.email).toLowerCase() === email);
+  let user = known;
+  // base ancienne ou modifiée : on restaure le compte de démonstration
+  if (demoAccount && (!user || String(demoAccount.password) === password)) {
+    user = ensureDemoUser(demoAccount);
+  }
+  if (!user) {
+    return { error: 'Aucun compte pour cette adresse email. Utilisez un compte de démonstration ci-dessous ou créez un compte client.' };
+  }
+  if (String(user.password) !== password) {
+    return { error: 'Mot de passe incorrect pour ' + user.email };
+  }
+  return { user };
+}
+
+function newToken(user) {
+  return 'demo-' + user.id + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+function openDemoSession(role) {
+  const demo = seed.USERS.find((u) => u.role === String(role || '').toLowerCase());
+  if (!demo) return null;
+  const user = ensureDemoUser(demo);
+  const token = newToken(user);
+  createSession(token, user.id);
+  return { token, user };
+}
+
+// Repli sans JavaScript : un formulaire HTML classique connecte et redirige.
+app.post('/api/auth/demo-form', (req, res) => {
+  const opened = openDemoSession((req.body && req.body.role) || '');
+  if (!opened) return res.redirect(303, '/?erreur=' + encodeURIComponent('Espace de démonstration inconnu.'));
+  setSessionCookie(res, opened.token);
+  res.redirect(303, '/?espace=' + encodeURIComponent(opened.user.role) + '#/');
+});
+
+app.post('/api/auth/login-form', (req, res) => {
+  const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+  const password = String((req.body && req.body.password) || '');
+  if (!email || !password) return res.redirect(303, '/?erreur=' + encodeURIComponent('Email et mot de passe requis.'));
+  const result = authenticate(email, password);
+  if (result.error) return res.redirect(303, '/?erreur=' + encodeURIComponent(result.error));
+  const token = newToken(result.user);
+  createSession(token, result.user.id);
+  setSessionCookie(res, token);
+  res.redirect(303, '/#/');
+});
+
 app.post('/api/auth/login', (req, res) => {
   const email = String((req.body && req.body.email) || '').trim().toLowerCase();
   const password = String((req.body && req.body.password) || '');
   if (!email || !password) {
     return res.status(400).json({ error: 'Email et mot de passe requis' });
   }
-  const demoAccount = seed.USERS.find((u) => String(u.email).toLowerCase() === email);
-  let known = db.users.find((u) => String(u.email || '').toLowerCase() === email);
-  // base ancienne ou modifiée : on restaure le compte de démonstration
-  if (demoAccount && (!known || String(demoAccount.password) === password)) {
-    known = ensureDemoUser(demoAccount);
-  }
-  if (!known) {
-    return res.status(401).json({
-      error: 'Aucun compte pour cette adresse email. Utilisez un compte de démonstration ci-dessous ou créez un compte client.'
-    });
-  }
-  if (String(known.password) !== password) {
-    return res.status(401).json({ error: 'Mot de passe incorrect pour ' + known.email });
-  }
-  const user = known;
+  const result = authenticate(email, password);
+  if (result.error) return res.status(401).json({ error: result.error });
+  const user = result.user;
   user.lastLoginAt = new Date().toISOString();
   save();
-  const token = 'demo-' + user.id + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  const token = newToken(user);
   createSession(token, user.id);
   setSessionCookie(res, token);
   res.json({ token, user: publicUser(user) });
@@ -738,13 +777,10 @@ app.post('/api/auth/login', (req, res) => {
 /* Connexion de démonstration en un clic : ne peut pas échouer (le compte est créé/réparé) */
 app.post('/api/auth/demo', (req, res) => {
   const role = String((req.body && req.body.role) || '').toLowerCase();
-  const demo = seed.USERS.find((u) => u.role === role);
-  if (!demo) return res.status(400).json({ error: 'Rôle de démonstration inconnu : ' + (role || '(vide)') });
-  const user = ensureDemoUser(demo);
-  const token = 'demo-' + user.id + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-  createSession(token, user.id);
-  setSessionCookie(res, token);
-  res.json({ token, user: publicUser(user) });
+  const opened = openDemoSession(role);
+  if (!opened) return res.status(400).json({ error: 'Rôle de démonstration inconnu : ' + (role || '(vide)') });
+  setSessionCookie(res, opened.token);
+  res.json({ token: opened.token, user: publicUser(opened.user) });
 });
 
 app.post('/api/auth/register', (req, res) => {

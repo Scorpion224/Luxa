@@ -1748,6 +1748,35 @@ tr.row-selected { background: #f7fbf8; }
 .auth-reset .link-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #6f827f; }
 .auth-reset .link-btn:hover { color: var(--teal, #0f6b60); text-decoration: underline; }
 
+.auth-demo-form { display: contents; margin: 0; }
+
+.auth-debug {
+  margin: 14px 0 0;
+  border-top: 1px solid #ece7dd;
+  padding-top: 8px;
+  font-size: 11px;
+  color: #7b8a87;
+}
+.auth-debug summary { cursor: pointer; text-align: center; list-style: none; }
+.auth-debug summary::-webkit-details-marker { display: none; }
+.auth-debug summary::after { content: ' ▾'; }
+.auth-debug[open] summary::after { content: ' ▴'; }
+.auth-debug pre {
+  margin: 8px 0 0;
+  padding: 9px 10px;
+  background: #f7f6f2;
+  border: 1px solid #ece7dd;
+  border-radius: 8px;
+  font-size: 10.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #55605e;
+  text-align: left;
+  max-height: 150px;
+  overflow: auto;
+}
+
 .auth-demo-btn.busy {
   border-color: var(--teal, #0f6b60);
   background: #eef7f5;

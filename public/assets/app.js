@@ -46,8 +46,24 @@
   }
   const todayIso = () => new Date().toISOString().slice(0, 10);
 
+  function pushNetlog(entry) {
+    NETLOG.push(entry);
+    if (NETLOG.length > 8) NETLOG.shift();
+    renderNetlog();
+  }
+
+  function renderNetlog() {
+    const box = document.getElementById('authLog');
+    if (!box) return;
+    box.textContent = NETLOG.length
+      ? NETLOG.map((e) => e).join('\n')
+      : 'aucun échange avec le serveur pour le moment';
+  }
+
   async function api(path, options) {
     const opts = Object.assign({ headers: {} }, options || {});
+    const method = (opts.method || 'GET').toUpperCase();
+    const started = Date.now();
     const token = state.session && state.session.token;
     if (token) opts.headers.Authorization = 'Bearer ' + token;
     if (opts.body && typeof opts.body !== 'string') {
@@ -58,8 +74,10 @@
     try {
       res = await fetch(path, opts);
     } catch (err) {
+      pushNetlog(method + ' ' + path + ' → réseau indisponible (' + ((err && err.message) || 'inconnu') + ')');
       throw new Error('Serveur injoignable — vérifiez que l’application est démarrée (npm start)');
     }
+    pushNetlog(method + ' ' + path + ' → ' + res.status + ' en ' + (Date.now() - started) + ' ms');
     const text = await res.text();
     let data = null;
     if (text) {
@@ -145,6 +163,8 @@
   /* ---------------------------------------------------------------------- */
   const SESSION_KEY = 'ppg.session';
   const APP_VERSION = '3.0';
+  const APP_BUILD = 'b9';
+  const NETLOG = [];
   const MODULE_PERMISSION = {
     devis: 'devis:read',
     catalogue: 'catalogue:read',
@@ -347,10 +367,13 @@
       client: 'client123'
     };
     const demoButtons = accounts.map((role) =>
-      '<button type="button" class="auth-demo-btn' + (role.key === 'client' ? ' wide' : '') + '" data-demo-role="' + esc(role.key) + '" data-demo-email="' + esc(emails[role.key] || '') + '" data-demo-password="' + esc(passwords[role.key] || '') + '">' +
-        '<span class="auth-demo-role">' + esc(role.label) + '</span>' +
-        '<span class="auth-demo-mail">' + esc(emails[role.key] || '') + '</span>' +
-      '</button>'
+      '<form class="auth-demo-form" data-demo-form method="post" action="/api/auth/demo-form">' +
+        '<input type="hidden" name="role" value="' + esc(role.key) + '">' +
+        '<button type="submit" class="auth-demo-btn' + (role.key === 'client' ? ' wide' : '') + '" data-demo-role="' + esc(role.key) + '" data-demo-email="' + esc(emails[role.key] || '') + '" data-demo-password="' + esc(passwords[role.key] || '') + '">' +
+          '<span class="auth-demo-role">' + esc(role.label) + '</span>' +
+          '<span class="auth-demo-mail">' + esc(emails[role.key] || '') + '</span>' +
+        '</button>' +
+      '</form>'
     ).join('');
 
     view.innerHTML =
@@ -361,41 +384,27 @@
           '<p class="auth-sub">Espace de gestion commerciale ou espace client — un seul point d’entrée.</p>' +
           '<div class="auth-notice" id="authNotice"' + (state.authNotice ? '' : ' hidden') + '>' +
             '<i class="fa-solid fa-circle-info"></i><span>' + esc(state.authNotice || '') + '</span></div>' +
-          '<form id="loginForm" class="auth-form" novalidate>' +
+          '<form id="loginForm" class="auth-form" method="post" action="/api/auth/login-form" novalidate>' +
             '<div class="field"><label for="loginEmail">Adresse email</label>' +
-              '<input class="input" id="loginEmail" type="email" autocomplete="username" placeholder="prenom@peinturepro.gn"></div>' +
+              '<input class="input" id="loginEmail" name="email" type="email" autocomplete="username" placeholder="prenom@peinturepro.gn"></div>' +
             '<div class="field"><label for="loginPassword">Mot de passe</label>' +
-              '<input class="input" id="loginPassword" type="password" autocomplete="current-password" placeholder="••••••••"></div>' +
+              '<input class="input" id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="••••••••"></div>' +
             '<div class="auth-error" id="loginError" hidden></div>' +
             '<button class="btn btn-primary auth-submit" type="submit"><i class="fa-solid fa-arrow-right-to-bracket"></i> Se connecter</button>' +
           '</form>' +
           '<p class="auth-switch">Pas encore de compte ? ' +
             '<button type="button" class="link-btn" data-action="open-register">Créer mon compte client</button></p>' +
-          '<p class="auth-status" id="authStatus">Version ' + APP_VERSION + ' · vérification du serveur…</p>' +
+          '<p class="auth-status" id="authStatus">Version ' + APP_VERSION + ' · ' + APP_BUILD + ' · vérification du serveur…</p>' +
           '<p class="auth-reset"><button type="button" class="link-btn" data-action="hard-reset">' +
             '<i class="fa-solid fa-rotate-right"></i> Un souci pour vous connecter ? Recharger l’application</button></p>' +
           '<div class="auth-demo">' +
             '<div class="auth-demo-title">Comptes de démonstration</div>' +
             '<div class="auth-demo-list">' + demoButtons + '</div>' +
           '</div>' +
+          '<details class="auth-debug"><summary>Journal de connexion</summary>' +
+            '<pre id="authLog">aucun échange avec le serveur pour le moment</pre></details>' +
         '</div>' +
       '</div>';
-
-    const form = document.getElementById('loginForm');
-    const errorBox = document.getElementById('loginError');
-    const showError = (message) => {
-      errorBox.textContent = message;
-      errorBox.hidden = false;
-    };
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const email = document.getElementById('loginEmail').value.trim();
-      const password = document.getElementById('loginPassword').value;
-      if (!email || !password) return showError('Renseignez votre email et votre mot de passe.');
-      errorBox.hidden = true;
-      signIn(email, password).catch((err) => showError(err.message));
-    });
 
     const status = document.getElementById('authStatus');
     if (status) {
@@ -404,7 +413,7 @@
         .then((health) => {
           const missing = (health.demoAccounts || []).filter((a) => !a.exists);
           const versionOk = String(health.version || '').indexOf(APP_VERSION) === 0;
-          status.textContent = 'Version ' + APP_VERSION + ' · serveur connecté' +
+          status.textContent = 'Version ' + APP_VERSION + ' · ' + APP_BUILD + ' · serveur connecté' +
             (versionOk ? '' : ' — version serveur ' + (health.version || 'inconnue') + ' : rechargez la page (Ctrl+Shift+R)') +
             (missing.length ? ' · comptes manquants : ' + missing.map((a) => a.email).join(', ') : '');
           status.classList.toggle('warn', !versionOk || missing.length > 0);
@@ -415,8 +424,7 @@
         });
     }
 
-    // La délégation d'événements (attachée une seule fois au document) reste valable
-    // même si l'écran de connexion est redessiné : un clic ne peut plus rester sans effet.
+    renderNetlog();
   }
 
   function startDemoLogin(btn) {
@@ -471,11 +479,31 @@
     surfaceLoginError('Erreur inattendue : ' + ((reason && reason.message) || reason || 'inconnue'));
   });
 
-  document.addEventListener('click', (e) => {
-    const demoBtn = e.target.closest('[data-demo-role]');
-    if (demoBtn) {
+  function showLoginError(message) {
+    const box = document.getElementById('loginError');
+    if (!box) return;
+    box.textContent = message;
+    box.hidden = false;
+  }
+
+  document.addEventListener('submit', (e) => {
+    const form = e.target;
+    if (form && form.hasAttribute && form.hasAttribute('data-demo-form')) {
       e.preventDefault();
-      startDemoLogin(demoBtn);
+      const btn = form.querySelector('[data-demo-role]');
+      if (btn) startDemoLogin(btn);
+      return;
+    }
+    if (form && form.id === 'loginForm') {
+      e.preventDefault();
+      const emailEl = document.getElementById('loginEmail');
+      const passEl = document.getElementById('loginPassword');
+      const email = (emailEl && emailEl.value || '').trim();
+      const password = (passEl && passEl.value) || '';
+      if (!email || !password) return showLoginError('Renseignez votre email et votre mot de passe.');
+      const box = document.getElementById('loginError');
+      if (box) { box.textContent = ''; box.hidden = true; }
+      signIn(email, password).catch((err) => showLoginError(err && err.message ? err.message : 'Connexion impossible'));
     }
   });
 
@@ -3226,6 +3254,18 @@
         sessionStorage.removeItem('ppg.build');
       }
     } catch (err) { /* serveur indisponible : l'écran de connexion affichera le détail */ }
+
+    // message renvoyé par la connexion « sans JavaScript » (redirection du serveur)
+    try {
+      const params = new URLSearchParams(location.search);
+      const erreur = params.get('erreur');
+      if (erreur) {
+        state.authNotice = String(erreur);
+        params.delete('erreur');
+        const qs = params.toString();
+        history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+      }
+    } catch (err) { /* navigateur ancien : on ignore */ }
 
     state.roles = await api('/api/roles').catch(() => null);
     state.company = await api('/api/company').catch(() => null);
