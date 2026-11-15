@@ -558,7 +558,7 @@ table.data .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cat-chip:hover { border-color: #c9dcd2; }
 .cat-chip.active { background: var(--teal); border-color: var(--teal); color: #fff; }
 
-.product-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.product-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
 .product-card {
   background: #fff;
   border: 1px solid var(--line);
@@ -612,16 +612,16 @@ table.data .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
   display: flex;
   align-items: center;
   gap: 13px;
-  background: #fcf4e4;
-  border: 1px solid #f3e5c9;
-  border-left: 3px solid #e2a845;
+  background: #fdf6e8;
+  border: 1px solid #f1e3c8;
   border-radius: 10px;
   padding: 13px 17px;
   color: #2c3f42;
   font-size: 14px;
   font-weight: 600;
 }
-.notice i { color: #cf8a1f; font-size: 17px; }
+.notice i { color: #e08b1f; font-size: 18px; }
+.notice .notice-text { border-left: 1px solid #e6d9c4; padding-left: 15px; }
 .notice .notice-text { font-weight: 600; }
 
 /* ==========================================================================
