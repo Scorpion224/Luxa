@@ -7,6 +7,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const seed = require('./data/seed');
+const roles = require('./data/roles');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -174,12 +175,7 @@ app.get('/api/company', (req, res) => res.json(db.company));
 /* ------------------------------------------------------------------ */
 /* Utilisateurs & authentification (démonstration)                     */
 /* ------------------------------------------------------------------ */
-const ROLE_LABEL = {
-  admin: 'Administrateur',
-  commercial: 'Commercial',
-  comptable: 'Comptable',
-  stockiste: 'Stockiste'
-};
+const ROLE_LABEL = roles.ROLE_LABEL;
 
 // Le mot de passe ne sort jamais de l'API
 function publicUser(user) {
@@ -189,6 +185,7 @@ function publicUser(user) {
     email: user.email,
     role: user.role,
     roleLabel: ROLE_LABEL[user.role] || user.role,
+    permissions: roles.permissionsFor(user.role),
     phone: user.phone || '',
     initials: (user.name || '')
       .split(/\s+/)
@@ -198,6 +195,18 @@ function publicUser(user) {
       .join('')
   };
 }
+
+app.get('/api/roles', (req, res) => {
+  res.json({
+    roles: Object.keys(roles.ROLE_PERMISSIONS).map((key) => ({
+      key,
+      label: ROLE_LABEL[key],
+      summary: roles.ROLE_SUMMARY[key],
+      permissions: roles.permissionsFor(key)
+    })),
+    modules: roles.MODULES
+  });
+});
 
 app.get('/api/users', (req, res) => {
   const role = String(req.query.role || '').toLowerCase();

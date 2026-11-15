@@ -28,6 +28,18 @@ Le jeu de démonstration est régénéré automatiquement par `data/seed.js`.
 | Comptable | `comptable@peinturepro.gn` | `compta123` |
 | Stockiste | `stock@peinturepro.gn` | `stock123` |
 
+### Rôles et permissions
+
+Les permissions suivent le format `module:action` et sont définies dans `data/roles.js`
+(exposées par `GET /api/roles`, renvoyées avec le profil à la connexion).
+
+| Rôle | Périmètre | Permissions |
+| --- | --- | --- |
+| **Administrateur** | Accès complet, y compris les comptes utilisateurs | `*` |
+| **Commercial** | Prospection et vente | `devis:read`, `devis:write`, `catalogue:read`, `clients:read`, `clients:write`, `chantiers:read`, `paiement:read` |
+| **Comptable** | Encaissements et suivi financier | `devis:read`, `clients:read`, `chantiers:read`, `paiement:read`, `paiement:write`, `finance:read`, `finance:write` |
+| **Stockiste** | Magasin et catalogue | `catalogue:read`, `catalogue:write`, `stocks:read`, `stocks:write`, `chantiers:read` |
+
 Les mots de passe sont stockés **en clair** et le jeton renvoyé par `/api/auth/login`
 est un jeton de démonstration : ce dispositif n'est pas prévu pour la production.
 
