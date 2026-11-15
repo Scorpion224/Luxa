@@ -44,6 +44,12 @@ déconnecte tout le monde (le navigateur revient à l'écran de connexion).
 | Commercial | `commercial@peinturepro.gn` | `com123` |
 | Comptable | `comptable@peinturepro.gn` | `compta123` |
 | Stockiste | `stock@peinturepro.gn` | `stock123` |
+| Client (particulier) | `client@peinturepro.gn` | `client123` |
+| Client (entreprise) | `mariama@peinturepro.gn` | `client123` |
+
+Un client peut aussi **créer son compte** depuis l'écran de connexion
+(« Créer mon compte client ») : le compte est rattaché à une fiche client
+(nom, téléphone, commune, quartier) créée automatiquement.
 
 ### Rôles et permissions
 
@@ -56,6 +62,7 @@ Les permissions suivent le format `module:action` et sont définies dans `data/r
 | **Commercial** | Prospection et vente | `devis:read`, `devis:write`, `catalogue:read`, `clients:read`, `clients:write`, `chantiers:read`, `paiement:read` |
 | **Comptable** | Encaissements et suivi financier | `devis:read`, `clients:read`, `chantiers:read`, `paiement:read`, `paiement:write`, `finance:read`, `finance:write` |
 | **Stockiste** | Magasin et catalogue | `catalogue:read`, `catalogue:write`, `stocks:read`, `stocks:write`, `chantiers:read` |
+| **Client** | Espace client (boutique, panier, devis, financement, rendez-vous) | `portail:read`, `boutique:read`, `panier:write`, `commande:read`, `commande:write`, `demande:write`, `reservation:write` |
 
 Les mots de passe sont stockés **en clair** et le jeton renvoyé par `/api/auth/login`
 est un jeton de démonstration : ce dispositif n'est pas prévu pour la production.
@@ -72,6 +79,10 @@ est un jeton de démonstration : ce dispositif n'est pas prévu pour la producti
 | Stocks | `#/stocks` | Valorisation, alertes, niveaux de stock, ajustement rapide |
 | Chantiers | `#/chantiers` | Avancement, budgets, chefs de chantier, création |
 | Finance | `#/finance` | Encaissements, factures, synthèse, graphique 6 mois |
+| Planning des équipes | `#/planning` | Demandes de rendez-vous à confirmer, occupation des 14 prochains jours, équipes peintres |
+| Boutique (client) | `#/boutique` | Catalogue, recherche, familles, bouton « Ajouter au panier », total du panier |
+| Mon panier (client) | `#/panier` | Quantités, suppression, récapitulatif, commande **Cash** ou **PEINTURE FLEX** |
+| Ma peinture (client) | `#/ma-peinture` | Devis pour la maison, financement FLEX, calendrier des créneaux, équipes, rendez-vous, commandes |
 
 Actions disponibles : créer un devis, changer de produit du devis, enregistrer un
 paiement (total ou partiel), ajuster le stock, créer un client, créer/mettre à jour
@@ -116,6 +127,45 @@ recalcule le plan (refusé si une échéance est déjà payée) ;
 `POST /api/payments/:quoteId/financing/advance` fait avancer le dossier bancaire
 et débloque le crédit à la validation.
 
+## Espace client
+
+Chaque client se connecte avec son propre compte (ou en crée un) et arrive sur
+l'espace client : le menu de gestion est remplacé par **Boutique**, **Mon panier**
+et **Ma peinture**. Un lien compte pour chaque étape :
+
+1. **Devis pour sa maison** — formulaire de pièces (longueur, largeur, hauteur,
+   portes, fenêtres), peinture choisie dans le catalogue ; le devis est calculé
+   avec le même moteur que l'écran commercial (`POST /api/portal/quotes`) et
+   apparaît dans « Mes devis ».
+2. **Boutique et panier** — chaque produit a un bouton « Ajouter au panier »
+   (`POST /api/cart/items`), les quantités se règlent dans « Mon panier », puis
+   la commande est enregistrée en espèces (`mode: "cash"`) ou à crédit
+   (`mode: "flex"`).
+3. **PEINTURE FLEX après validation de la banque** — la demande de financement
+   (`POST /api/portal/flex`) transmet le dossier *Dossier → Pièces → Transmis →
+   Décision de la banque* ; tant que la décision n'est pas « Validée », le
+   calendrier est verrouillé, l'achat à crédit et la réservation répondent `400`.
+   Le bouton « Décision de la banque » est marqué **Démo** : il simule la réponse
+   de l'agence pour dérouler le parcours de bout en bout.
+4. **Date, créneau et équipe peintre** — une fois le financement validé,
+   `GET /api/planning/slots` renvoie 14 jours × 4 créneaux (08h00, 10h00, 14h00,
+   16h00 ; dimanche fermé) avec les équipes encore libres. Le client choisit un
+   créneau et une équipe (`POST /api/bookings`) : la réservation est **en attente**
+   jusqu'à la confirmation de l'équipe, faite par le commercial ou l'administrateur
+   dans « Planning des équipes » (`PATCH /api/bookings/:id`, permission
+   `planning:manage`). Une équipe mobilisée disparaît des créneaux libres ; une
+   fois toutes les équipes prises, le créneau est complet.
+
+Données de démonstration : 3 équipes (Équipe FOM 1 — Mamadou Saliou, 8 peintres ;
+Équipe FLEX 2 — Abdoulaye Camara, 5 peintres ; Équipe Satin 3 — Fatou Bangoura,
+6 peintres), un rendez-vous confirmé (RDV-2026-001, Hôtel Kaloum, Équipe FOM 1)
+et une commande livrée (CMD-2026-004).
+
+Endpoints : `GET /api/portal/me`, `GET|POST|PATCH|DELETE /api/cart*`,
+`GET|POST /api/orders`, `POST /api/portal/quotes`, `POST /api/portal/flex`,
+`POST /api/portal/financing/:quoteId/advance`, `GET /api/teams`,
+`GET /api/planning/slots`, `GET|POST /api/bookings`, `PATCH /api/bookings/:id`.
+
 ## API
 
 | Méthode | Route | Rôle |
@@ -124,6 +174,7 @@ et débloque le crédit à la validation.
 | GET | `/api/users` · `/api/users/:id` | Comptes utilisateurs (filtre `?role=`) |
 | GET | `/api/roles` | Rôles, résumés, permissions et modules |
 | POST | `/api/auth/login` | Connexion `{ email, password }` → jeton de démo + profil |
+| POST | `/api/auth/register` | Création d'un compte client `{ name, email, password, phone, zone, address }` |
 | POST | `/api/auth/logout` | Ferme la session courante |
 | GET | `/api/auth/me` | Profil du porteur du jeton (401 si expiré) |
 | GET | `/api/company` | Société (nom, TVA, adresse) |
@@ -142,12 +193,23 @@ et débloque le crédit à la validation.
 | POST | `/api/payments/:id/schedule[/init]` | Échéancier |
 | POST | `/api/payments/:id/financing/advance` | Avancement du dossier bancaire |
 | GET | `/api/acomptes` · `/api/chantiers` · `/api/finance` | Acomptes, chantiers, factures et série mensuelle |
+| GET | `/api/portal/me` | Espace client : fiche, panier, devis, commandes, rendez-vous, équipes |
+| GET/POST/PATCH/DELETE | `/api/cart` · `/api/cart/items[/:productId]` | Panier du client connecté |
+| GET/POST | `/api/orders` | Commandes du client (`mode: "cash"` ou `"flex"`) |
+| POST | `/api/portal/quotes` | Demande de devis « peindre ma maison » |
+| POST | `/api/portal/flex` | Demande de financement PEINTURE FLEX `{ quoteId, months }` |
+| POST | `/api/portal/financing/:id/advance` | Avancement du dossier du client |
+| GET | `/api/teams` · `/api/planning/slots?days=14` | Équipes peintres et créneaux libres |
+| GET/POST/PATCH | `/api/bookings[/:id]` | Rendez-vous : création, confirmation/refus (`planning:manage`) |
 
 ## Structure
 
 ```
 server.js              API Express + fallback SPA
 data/seed.js           Données de démonstration
+data/roles.js          Rôles, permissions, modules de menu
+data/flex.js           Règles PEINTURE FLEX (abonnement, taux, échéancier)
+data/portal.js         Équipes peintres, créneaux et disponibilités
 data/db.json           Base JSON (générée, ignorée par git)
 public/index.html      Coquille SPA
 public/assets/app.css  Design system (thème teal / sable / orange)

@@ -8,14 +8,16 @@ const ROLE_LABEL = {
   admin: 'Administrateur',
   commercial: 'Commercial',
   comptable: 'Comptable',
-  stockiste: 'Stockiste'
+  stockiste: 'Stockiste',
+  client: 'Client'
 };
 
 const ROLE_SUMMARY = {
   admin: 'Accès complet : devis, catalogue, clients, stocks, chantiers, finance et comptes utilisateurs.',
-  commercial: 'Prospection et vente : devis, clients, consultation du catalogue et des chantiers.',
+  commercial: 'Prospection et vente : devis, clients, consultation du catalogue, planning des équipes.',
   comptable: 'Encaissements et suivi financier : paiements, factures, synthèse financière.',
-  stockiste: 'Gestion du magasin : niveaux de stock, ajustements et catalogue produits.'
+  stockiste: 'Gestion du magasin : niveaux de stock, ajustements et catalogue produits.',
+  client: 'Espace client : demande de devis, boutique et panier, financement PEINTURE FLEX et réservation d’une équipe.'
 };
 
 const ROLE_PERMISSIONS = {
@@ -25,31 +27,47 @@ const ROLE_PERMISSIONS = {
     'catalogue:read',
     'clients:read', 'clients:write',
     'chantiers:read',
-    'paiement:read'
+    'paiement:read',
+    'planning:read', 'planning:manage',
+    'commande:read'
   ],
   comptable: [
     'devis:read',
     'clients:read',
     'chantiers:read',
     'paiement:read', 'paiement:write',
-    'finance:read', 'finance:write'
+    'finance:read', 'finance:write',
+    'planning:read',
+    'commande:read'
   ],
   stockiste: [
     'catalogue:read', 'catalogue:write',
     'stocks:read', 'stocks:write',
-    'chantiers:read'
+    'chantiers:read',
+    'commande:read'
+  ],
+  client: [
+    'portail:read',
+    'boutique:read', 'panier:write',
+    'commande:write', 'commande:read',
+    'demande:write',
+    'reservation:write'
   ]
 };
 
 /** Modules de l'application et permission de lecture associée (utilisée par la navigation). */
 const MODULES = [
+  { key: 'boutique', label: 'Boutique', read: 'boutique:read' },
+  { key: 'panier', label: 'Mon panier', read: 'panier:write' },
+  { key: 'ma-peinture', label: 'Ma peinture', read: 'portail:read' },
   { key: 'devis', label: 'Devis', read: 'devis:read' },
   { key: 'catalogue', label: 'Catalogue', read: 'catalogue:read' },
   { key: 'clients', label: 'Clients', read: 'clients:read' },
   { key: 'stocks', label: 'Stocks', read: 'stocks:read' },
   { key: 'chantiers', label: 'Chantiers', read: 'chantiers:read' },
   { key: 'finance', label: 'Finance', read: 'finance:read' },
-  { key: 'paiement', label: 'Parcours de paiement', read: 'paiement:read' }
+  { key: 'paiement', label: 'Parcours de paiement', read: 'paiement:read' },
+  { key: 'planning', label: 'Planning', read: 'planning:read' }
 ];
 
 function permissionsFor(role) {

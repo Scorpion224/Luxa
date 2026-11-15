@@ -9,6 +9,7 @@ const fs = require('fs');
 const seed = require('./data/seed');
 const roles = require('./data/roles');
 const flex = require('./data/flex');
+const portal = require('./data/portal');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,7 +33,11 @@ function seedDatabase() {
     payments: seed.PAYMENTS,
     chantiers: seed.CHANTIERS,
     draftQuote: seed.DRAFT_QUOTE,
-    counters: { quote: 32, payment: 15, client: 9, chantier: 8 }
+    carts: {},
+    orders: seed.CLIENT_ORDERS,
+    teams: portal.TEAMS,
+    bookings: seed.PORTAL_BOOKINGS,
+    counters: { quote: 32, payment: 15, client: 9, chantier: 8, order: 5, booking: 2 }
   };
 }
 
@@ -44,6 +49,13 @@ try {
 }
 // migration douce : une base créée avant l'arrivée des comptes utilisateurs
 if (!Array.isArray(db.users)) db.users = seed.USERS;
+if (!db.carts || typeof db.carts !== 'object') db.carts = {};
+if (!Array.isArray(db.orders)) db.orders = seed.CLIENT_ORDERS;
+if (!Array.isArray(db.teams) || !db.teams.length) db.teams = portal.TEAMS;
+if (!Array.isArray(db.bookings)) db.bookings = seed.PORTAL_BOOKINGS;
+if (!db.counters) db.counters = { quote: 32, payment: 15, client: 9, chantier: 8, order: 5, booking: 2 };
+if (!db.counters.order) db.counters.order = 5;
+if (!db.counters.booking) db.counters.booking = 2;
 
 function save() {
   try {
@@ -188,6 +200,7 @@ function publicUser(user) {
     roleLabel: ROLE_LABEL[user.role] || user.role,
     permissions: roles.permissionsFor(user.role),
     phone: user.phone || '',
+    clientId: user.clientId || null,
     initials: (user.name || '')
       .split(/\s+/)
       .filter(Boolean)
@@ -233,13 +246,325 @@ app.get('/api/roles', (req, res) => {
   });
 });
 
-app.get('/api/users', (req, res) => {
+/* ------------------------------------------------------------------ */
+/* Espace client : panier, commandes, demandes, planning               */
+/* ------------------------------------------------------------------ */
+function cartOf(userId) {
+  if (!db.carts[userId]) db.carts[userId] = [];
+  return db.carts[userId];
+}
+
+function cartSummary(userId) {
+  const items = cartOf(userId)
+    .map((line) => {
+      const product = db.products.find((p) => p.id === line.productId);
+      if (!product) return null;
+      const qty = Math.max(1, Number(line.qty) || 1);
+      return {
+        productId: product.id,
+        name: product.name,
+        category: product.category,
+        price: product.price,
+        unit: product.unit,
+        image: product.image || null,
+        stock: product.stock,
+        qty,
+        total: product.price * qty
+      };
+    })
+    .filter(Boolean);
+  return {
+    items,
+    count: items.reduce((sum, i) => sum + i.qty, 0),
+    total: items.reduce((sum, i) => sum + i.total, 0)
+  };
+}
+
+function clientOfUser(user) {
+  if (!user || !user.clientId) return null;
+  return db.clients.find((c) => c.id === user.clientId) || null;
+}
+
+function clientFinancingValidated(clientId) {
+  return db.quotes
+    .filter((q) => q.clientId === clientId)
+    .some((q) => flex.isBankValidated(q));
+}
+
+app.get('/api/cart', (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: 'Session expirée' });
+  res.json(cartSummary(user.id));
+});
+
+app.post('/api/cart/items', requirePermission('panier:write'), (req, res) => {
+  const { productId, qty } = req.body || {};
+  const product = db.products.find((p) => p.id === productId);
+  if (!product) return res.status(404).json({ error: 'Produit non trouvé' });
+  const cart = cartOf(req.user.id);
+  const line = cart.find((l) => l.productId === productId);
+  const quantity = Math.max(1, Number(qty) || 1);
+  if (line) line.qty = Math.min(999, Number(line.qty) + quantity);
+  else cart.push({ productId, qty: quantity });
+  save();
+  res.status(201).json(cartSummary(req.user.id));
+});
+
+app.patch('/api/cart/items/:productId', requirePermission('panier:write'), (req, res) => {
+  const cart = cartOf(req.user.id);
+  const line = cart.find((l) => l.productId === req.params.productId);
+  if (!line) return res.status(404).json({ error: 'Ligne de panier non trouvée' });
+  const qty = Number((req.body || {}).qty);
+  if (!qty || qty < 1) {
+    db.carts[req.user.id] = cart.filter((l) => l.productId !== req.params.productId);
+  } else {
+    line.qty = Math.min(999, Math.round(qty));
+  }
+  save();
+  res.json(cartSummary(req.user.id));
+});
+
+app.delete('/api/cart/items/:productId', requirePermission('panier:write'), (req, res) => {
+  db.carts[req.user.id] = cartOf(req.user.id).filter((l) => l.productId !== req.params.productId);
+  save();
+  res.json(cartSummary(req.user.id));
+});
+
+app.delete('/api/cart', requirePermission('panier:write'), (req, res) => {
+  db.carts[req.user.id] = [];
+  save();
+  res.json(cartSummary(req.user.id));
+});
+
+app.post('/api/orders', requirePermission('commande:write'), (req, res) => {
+  const summary = cartSummary(req.user.id);
+  const mode = (req.body || {}).mode === 'flex' ? 'flex' : 'cash';
+  if (!summary.items.length) return res.status(400).json({ error: 'Votre panier est vide' });
+  const client = clientOfUser(req.user);
+  if (mode === 'flex' && !clientFinancingValidated(client ? client.id : null)) {
+    return res.status(400).json({ error: 'Le financement PEINTURE FLEX de la banque doit être validé avant cet achat à crédit' });
+  }
+  const order = {
+    id: 'CMD-2026-' + String(db.counters.order++).padStart(3, '0'),
+    clientId: client ? client.id : null,
+    clientName: client ? client.name : req.user.name,
+    userId: req.user.id,
+    mode,
+    status: mode === 'cash' ? 'a_preparer' : 'en_financement',
+    items: summary.items.map((i) => ({ productId: i.productId, name: i.name, price: i.price, qty: i.qty })),
+    total: summary.total,
+    createdAt: new Date().toISOString().slice(0, 10),
+    paidAt: null
+  };
+  db.orders.unshift(order);
+  db.carts[req.user.id] = [];
+  save();
+  res.status(201).json(order);
+});
+
+app.get('/api/orders', (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: 'Session expirée' });
+  const mine = db.orders.filter((o) => o.userId === user.id || (user.clientId && o.clientId === user.clientId));
+  const all = roles.can(user.role, 'commande:read') && user.role !== 'client';
+  res.json(all ? db.orders : mine);
+});
+
+/* Demande de devis « peindre ma maison » */
+app.post('/api/portal/quotes', requirePermission('demande:write'), (req, res) => {
+  const body = req.body || {};
+  const client = clientOfUser(req.user);
+  if (!client) return res.status(400).json({ error: 'Aucune fiche client rattachée à ce compte' });
+  const calc = calculateQuote({
+    rooms: body.rooms,
+    productId: body.productId,
+    rendement: body.rendement,
+    coats: body.coats,
+    waste: body.waste,
+    laborPrice: body.laborPrice,
+    transport: body.transport,
+    tvaRate: body.tvaRate,
+    tvaEnabled: body.tvaEnabled
+  });
+  const lines = buildLinesFromCalculation(calc, body.finish);
+  const quote = {
+    id: `DV-2026-${String(db.counters.quote++).padStart(3, '0')}`,
+    clientId: client.id,
+    clientName: client.name,
+    clientCompany: client.company,
+    subject: body.subject || 'Peinture de ma maison',
+    site: body.site || (client.address ? client.address + ', ' + client.city : client.city),
+    createdAt: new Date().toISOString().slice(0, 10),
+    validUntil: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+    status: 'envoye',
+    relance: false,
+    origin: 'portail',
+    surface: calc.surface,
+    rooms: calc.rooms,
+    productId: calc.productId,
+    finish: body.finish || '',
+    lines,
+    subtotal: calc.subtotal,
+    tvaRate: calc.tvaRate,
+    tvaEnabled: true,
+    tvaAmount: calc.tvaAmount,
+    total: calc.total,
+    schedule: [],
+    flex: null,
+    financing: null,
+    notes: body.notes || 'Demande envoyée depuis l’espace client.'
+  };
+  db.quotes.push(quote);
+  save();
+  res.status(201).json(quote);
+});
+
+/* Demande de financement PEINTURE FLEX */
+app.post('/api/portal/flex', requirePermission('demande:write'), (req, res) => {
+  const quote = findQuote((req.body || {}).quoteId);
+  if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
+  const client = clientOfUser(req.user);
+  if (client && quote.clientId !== client.id) {
+    return res.status(403).json({ error: 'Ce devis appartient à un autre client' });
+  }
+  const months = Math.min(flex.FLEX.maxMonths, Math.max(flex.FLEX.minMonths, Math.round(Number((req.body || {}).months) || 6)));
+  const plan = flex.buildFlexPlan(quote.total, months);
+  quote.flex = {
+    months: plan.months,
+    rate: plan.rate,
+    subscription: plan.subscription,
+    financed: plan.financed,
+    interest: plan.interest,
+    totalCredit: plan.totalCredit,
+    monthly: plan.monthly,
+    total: plan.total,
+    startDate: plan.startDate,
+    bankValidated: false,
+    requestedAt: new Date().toISOString().slice(0, 10)
+  };
+  if (!quote.financing) {
+    quote.financing = {
+      bank: flex.FLEX.bank,
+      amount: plan.financed,
+      steps: [
+        { name: 'Dossier', date: nowLabel(), status: 'en_cours', label: 'En cours' },
+        { name: 'Pièces', date: null, status: 'en_attente', label: 'En attente' },
+        { name: 'Transmis', date: null, status: 'en_attente', label: 'En attente' },
+        { name: 'Décision de la banque', date: null, status: 'en_attente', label: 'En attente' }
+      ]
+    };
+  }
+  save();
+  res.status(201).json(paymentSummary(quote));
+});
+
+app.get('/api/portal/me', (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: 'Session expirée' });
+  const client = clientOfUser(user);
+  const mine = (list, key) => (client ? list.filter((item) => item[key] === client.id) : list.filter((item) => item.userId === user.id));
+  const quotes = mine(db.quotes, 'clientId')
+    .slice()
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  res.json({
+    client: client,
+    cart: cartSummary(user.id),
+    quotes: quotes.map((q) => ({
+      id: q.id,
+      subject: q.subject,
+      createdAt: q.createdAt,
+      status: q.status,
+      statusLabel: STATUS[q.status] || q.status,
+      total: q.total,
+      surface: q.surface,
+      rooms: (q.rooms || []).length,
+      flex: q.flex || null,
+      financing: q.financing || null,
+      bankValidated: flex.isBankValidated(q),
+      schedule: (q.schedule || []).length ? {
+        count: q.schedule.filter((s) => s.kind === 'installment').length,
+        monthly: (q.schedule.find((s) => s.kind === 'installment') || {}).amount || 0,
+        paid: q.schedule.filter((s) => s.status === 'paye').length
+      } : null
+    })),
+    orders: mine(db.orders, 'clientId'),
+    bookings: mine(db.bookings || [], 'clientId'),
+    teams: db.teams || portal.TEAMS
+  });
+});
+
+/* Équipes et planning */
+app.get('/api/teams', (req, res) => {
+  res.json(db.teams || portal.TEAMS);
+});
+
+app.get('/api/planning/slots', (req, res) => {
+  const days = Number(req.query.days) || 14;
+  res.json(portal.buildCalendar(db.bookings || [], { days }));
+});
+
+app.get('/api/bookings', (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: 'Session expirée' });
+  const list = user.clientId
+    ? (db.bookings || []).filter((b) => b.clientId === user.clientId)
+    : (db.bookings || []);
+  res.json(list);
+});
+
+app.post('/api/bookings', requirePermission('reservation:write'), (req, res) => {
+  const body = req.body || {};
+  const quote = findQuote(body.quoteId);
+  if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
+  if (!flex.isBankValidated(quote)) {
+    return res.status(400).json({ error: 'Le financement doit être validé par la banque avant de réserver une intervention' });
+  }
+  const day = portal.buildCalendar(db.bookings || [], { days: 15 }).find((d) => d.date === body.date);
+  if (!day || day.closed) return res.status(400).json({ error: 'Date indisponible' });
+  const slot = day.slots.find((s) => s.slot === body.slot);
+  if (!slot || !slot.available) return res.status(400).json({ error: 'Créneau complet' });
+  const teamId = slot.teamIds.includes(body.teamId) ? body.teamId : slot.teamIds[0];
+  if (!teamId) return res.status(400).json({ error: 'Aucune équipe disponible sur ce créneau' });
+  const team = (db.teams || portal.TEAMS).find((t) => t.id === teamId);
+  const client = clientOfUser(req.user);
+  const booking = {
+    id: 'RDV-2026-' + String(db.counters.booking++).padStart(3, '0'),
+    quoteId: quote.id,
+    clientId: client ? client.id : quote.clientId,
+    clientName: client ? client.name : quote.clientName,
+    date: body.date,
+    slot: body.slot,
+    slotLabel: slot.label,
+    teamId,
+    teamName: team ? team.name : '',
+    status: 'demande',
+    createdAt: new Date().toISOString().slice(0, 10)
+  };
+  db.bookings.unshift(booking);
+  save();
+  res.status(201).json(booking);
+});
+
+app.patch('/api/bookings/:id', requirePermission('planning:manage'), (req, res) => {
+  const booking = (db.bookings || []).find((b) => b.id === req.params.id);
+  if (!booking) return res.status(404).json({ error: 'Réservation non trouvée' });
+  const status = (req.body || {}).status;
+  if (!['confirme', 'refuse'].includes(status)) {
+    return res.status(400).json({ error: 'Statut invalide' });
+  }
+  booking.status = status;
+  booking.decidedAt = nowLabel();
+  save();
+  res.json(booking);
+});
+
+app.get('/api/users', requirePermission('utilisateurs:read'), (req, res) => {
   const role = String(req.query.role || '').toLowerCase();
   const list = db.users.filter((u) => !role || u.role === role);
   res.json(list.map(publicUser));
 });
 
-app.get('/api/users/:id', (req, res) => {
+app.get('/api/users/:id', requirePermission('utilisateurs:read'), (req, res) => {
   const user = db.users.find((u) => u.id === req.params.id);
   if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
   res.json(publicUser(user));
@@ -260,6 +585,64 @@ app.post('/api/auth/login', (req, res) => {
   const token = 'demo-' + user.id + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
   sessions.set(token, { userId: user.id, createdAt: Date.now() });
   res.json({ token, user: publicUser(user) });
+});
+
+app.post('/api/auth/register', (req, res) => {
+  const body = req.body || {};
+  const name = String(body.name || '').trim();
+  const email = String(body.email || '').trim().toLowerCase();
+  const password = String(body.password || '');
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Nom, email et mot de passe sont obligatoires' });
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return res.status(400).json({ error: 'Adresse email invalide' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
+  }
+  if (db.users.some((u) => u.email.toLowerCase() === email)) {
+    return res.status(409).json({ error: 'Un compte existe déjà avec cette adresse email' });
+  }
+  const city = String(body.zone || '').trim() || 'Conakry';
+  const existing = db.clients.find((c) => String(c.email || '').toLowerCase() === email &&
+    !db.users.some((u) => u.clientId === c.id));
+  if (existing) {
+    existing.name = existing.name || name;
+    existing.contact = existing.contact || name;
+    existing.phone = existing.phone || String(body.phone || '').trim();
+    existing.address = existing.address || String(body.address || '').trim();
+    existing.zone = existing.zone || city;
+  }
+  const client = existing || {
+    id: 'c' + db.counters.client++,
+    name: name,
+    contact: name,
+    company: String(body.company || '').trim(),
+    phone: String(body.phone || '').trim(),
+    email: email,
+    city: city,
+    zone: String(body.zone || '').trim(),
+    address: String(body.address || '').trim(),
+    type: body.company ? 'Professionnel' : 'Particulier',
+    since: new Date().toISOString().slice(0, 10)
+  };
+  db.clients.push(client);
+  const user = {
+    id: 'u' + (db.users.length + 1),
+    name: name,
+    email: email,
+    password: password,
+    role: 'client',
+    phone: client.phone,
+    clientId: client.id,
+    createdAt: new Date().toISOString()
+  };
+  db.users.push(user);
+  save();
+  const token = 'demo-' + user.id + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  sessions.set(token, { userId: user.id, createdAt: Date.now() });
+  res.status(201).json({ token: token, user: publicUser(user), client: client });
 });
 
 app.post('/api/auth/logout', (req, res) => {
@@ -304,7 +687,7 @@ app.get('/api/products/:id', (req, res) => {
   res.json({ ...product, lowStock: product.stock <= product.minStock });
 });
 
-app.get('/api/stocks', (req, res) => {
+app.get('/api/stocks', requirePermission('stocks:read'), (req, res) => {
   const stocks = db.products.map((p) => ({
     ...p,
     status: p.stock <= p.minStock ? 'bas' : p.stock <= p.minStock * 1.5 ? 'moyen' : 'ok',
@@ -330,7 +713,7 @@ app.patch('/api/products/:id/stock', requirePermission('stocks:write'), (req, re
 /* ------------------------------------------------------------------ */
 /* API — Clients                                                       */
 /* ------------------------------------------------------------------ */
-app.get('/api/clients', (req, res) => {
+app.get('/api/clients', requirePermission('clients:read'), (req, res) => {
   const withStats = db.clients.map((c) => {
     const quotes = db.quotes.filter((q) => q.clientId === c.id);
     const accepted = quotes.filter((q) => q.status === 'accepte');
@@ -367,7 +750,7 @@ app.post('/api/clients', requirePermission('clients:write'), (req, res) => {
   res.status(201).json(client);
 });
 
-app.get('/api/clients/:id', (req, res) => {
+app.get('/api/clients/:id', requirePermission('clients:read'), (req, res) => {
   const client = db.clients.find((c) => c.id === req.params.id);
   if (!client) return res.status(404).json({ error: 'Client non trouvé' });
   res.json({
@@ -381,7 +764,7 @@ app.get('/api/clients/:id', (req, res) => {
 /* ------------------------------------------------------------------ */
 /* API — Devis                                                         */
 /* ------------------------------------------------------------------ */
-app.get('/api/quotes', (req, res) => {
+app.get('/api/quotes', requirePermission('devis:read'), (req, res) => {
   const { status, search, sort = 'recent', page = 1, perPage = 20 } = req.query;
   let items = activeQuotes();
   if (status) items = items.filter((q) => q.status === status);
@@ -402,7 +785,7 @@ app.get('/api/quotes', (req, res) => {
   res.json({ items: paged, total, page: current, perPage: size, pages });
 });
 
-app.get('/api/quotes/:id', (req, res) => {
+app.get('/api/quotes/:id', requirePermission('devis:read'), (req, res) => {
   const quote = findQuote(req.params.id);
   if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
   res.json(enrichQuote(quote));
@@ -412,7 +795,7 @@ app.post('/api/quotes/calculate', (req, res) => {
   res.json(calculateQuote(req.body || {}));
 });
 
-app.get('/api/quotes-draft', (req, res) => {
+app.get('/api/quotes-draft', requirePermission('devis:read'), (req, res) => {
   res.json(db.draftQuote);
 });
 
@@ -502,7 +885,7 @@ app.delete('/api/quotes/:id', requirePermission('devis:write'), (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/dashboard', (req, res) => {
+app.get('/api/dashboard', requirePermission('devis:read'), (req, res) => {
   const quotes = activeQuotes();
   const relance = quotes.filter((q) => q.relance);
   const kpis = {
@@ -552,14 +935,14 @@ function paymentSummary(quote) {
   };
 }
 
-app.get('/api/payments/quotes', (req, res) => {
+app.get('/api/payments/quotes', requirePermission('paiement:read'), (req, res) => {
   const items = db.quotes
     .filter((q) => (q.schedule && q.schedule.length) || ['accepte', 'en_retard'].includes(q.status))
     .map((q) => ({ id: q.id, label: `${q.id} — ${q.clientName}`, total: q.total, clientName: q.clientName, status: q.status }));
   res.json(items);
 });
 
-app.get('/api/payments/:quoteId', (req, res) => {
+app.get('/api/payments/:quoteId', requirePermission('paiement:read'), (req, res) => {
   const quote = findQuote(req.params.quoteId);
   if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
   res.json({
@@ -701,7 +1084,7 @@ app.post('/api/payments/:quoteId/schedule/init', requirePermission('paiement:wri
   res.status(201).json(paymentSummary(quote));
 });
 
-app.get('/api/acomptes', (req, res) => {
+app.get('/api/acomptes', requirePermission('paiement:read'), (req, res) => {
   let items = [...db.payments];
   const { clientId, quoteId } = req.query;
   if (clientId) items = items.filter((p) => p.clientId === clientId);
@@ -748,9 +1131,7 @@ function nowLabel() {
   return date.replace('.', '.') + ' à ' + time;
 }
 
-app.post('/api/payments/:quoteId/financing/advance', requirePermission('paiement:write'), (req, res) => {
-  const quote = findQuote(req.params.quoteId);
-  if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
+function advanceFinancing(quote) {
   if (!quote.financing) {
     quote.financing = {
       bank: 'Banque partenaire',
@@ -763,14 +1144,22 @@ app.post('/api/payments/:quoteId/financing/advance', requirePermission('paiement
       ]
     };
     save();
-    return res.json({ financing: quote.financing });
+    return quote.financing;
   }
   const steps = quote.financing.steps;
   const decision = steps.find((s) => s.name === 'Décision de la banque');
   const transmitted = steps.find((s) => s.name === 'Transmis');
   steps.forEach((s) => {
     if (!s.date) s.date = nowLabel();
-    if (s.status === 'en_attente') s.status = 'en_cours';
+    if (s.name === 'Dossier') {
+      s.status = 'valide';
+      s.label = 'Validé';
+    } else if (s.name === 'Pièces') {
+      if (s.status === 'en_attente') { s.status = 'completes'; s.label = 'Complètes'; }
+    } else if (s.status === 'en_attente') {
+      s.status = 'en_cours';
+      s.label = 'En cours';
+    }
   });
   if (transmitted) { transmitted.status = 'en_cours'; transmitted.label = 'En cours'; }
   if (decision && decision.status === 'en_cours' && !decision.decisionSent) {
@@ -782,15 +1171,42 @@ app.post('/api/payments/:quoteId/financing/advance', requirePermission('paiement
     decision.label = 'Validée';
     decision.date = nowLabel();
   }
-  if (quote.flex && flex.isBankValidated(quote)) quote.flex.bankValidated = true;
+  if (quote.flex && flex.isBankValidated(quote)) {
+    quote.flex.bankValidated = true;
+    // à la validation bancaire, l'échéancier FLEX est généré
+    if (!(quote.schedule || []).length) {
+      const plan = flex.buildFlexPlan(quote.total, quote.flex.months, { startDate: quote.flex.startDate });
+      quote.schedule = plan.schedule;
+    }
+  }
   save();
-  res.json({ financing: quote.financing });
+  return quote.financing;
+}
+
+app.post('/api/payments/:quoteId/financing/advance', requirePermission('paiement:write'), (req, res) => {
+  const quote = findQuote(req.params.quoteId);
+  if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
+  res.json({ financing: advanceFinancing(quote) });
+});
+
+/* Le client fait avancer son propre dossier de financement */
+app.post('/api/portal/financing/:quoteId/advance', requirePermission('demande:write'), (req, res) => {
+  const quote = findQuote(req.params.quoteId);
+  if (!quote) return res.status(404).json({ error: 'Devis non trouvé' });
+  const client = clientOfUser(currentUser(req));
+  if (client && quote.clientId !== client.id) {
+    return res.status(403).json({ error: 'Ce devis appartient à un autre client' });
+  }
+  if (!quote.flex) {
+    return res.status(400).json({ error: 'Aucune demande PEINTURE FLEX sur ce devis' });
+  }
+  res.json({ financing: advanceFinancing(quote), bankValidated: flex.isBankValidated(quote) });
 });
 
 /* ------------------------------------------------------------------ */
 /* API — Chantiers                                                     */
 /* ------------------------------------------------------------------ */
-app.get('/api/chantiers', (req, res) => {
+app.get('/api/chantiers', requirePermission('chantiers:read'), (req, res) => {
   res.json(db.chantiers.map((c) => ({ ...c, progress: Number(c.progress) || 0 })));
 });
 
@@ -836,7 +1252,7 @@ app.patch('/api/chantiers/:id', requirePermission('chantiers:write'), (req, res)
 /* ------------------------------------------------------------------ */
 const MONTHS = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 
-app.get('/api/finance', (req, res) => {
+app.get('/api/finance', requirePermission('finance:read'), (req, res) => {
   const accepted = db.quotes.filter((q) => ['accepte', 'en_retard'].includes(q.status));
   const payments = [...db.payments].sort((a, b) => new Date(b.date) - new Date(a.date));
   const encaisse = payments.reduce((s, p) => s + p.amount, 0);

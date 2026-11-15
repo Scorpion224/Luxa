@@ -725,6 +725,24 @@ const USERS = [
     password: 'stock123',
     role: 'stockiste',
     phone: '+224 622 00 00 04'
+  },
+  {
+    id: 'u5',
+    name: 'Ibrahima Sow',
+    email: 'client@peinturepro.gn',
+    password: 'client123',
+    role: 'client',
+    phone: '+224 628 77 88 99',
+    clientId: 'c5'
+  },
+  {
+    id: 'u6',
+    name: 'Mariama Bah',
+    email: 'mariama@peinturepro.gn',
+    password: 'client123',
+    role: 'client',
+    phone: '+224 611 22 33 44',
+    clientId: 'c6'
   }
 ];
 
@@ -760,7 +778,44 @@ const DRAFT_QUOTE = {
   total: 6420000
 };
 
+/* Espace client : équipes, créneaux et réservations confirmées de démonstration */
+const { buildCalendar } = require('./portal');
+
+const CLIENT_ORDERS = [
+  {
+    id: 'CMD-2026-004',
+    clientId: 'c5',
+    clientName: 'Ibrahima Sow',
+    mode: 'cash',
+    status: 'livree',
+    items: [
+      { productId: 'p1', name: 'FOM intérieur mat 20 L', price: 420000, qty: 2 },
+      { productId: 'p7', name: 'Mastic pour murs 10 kg', price: 125000, qty: 1 }
+    ],
+    total: 965000,
+    createdAt: '2026-01-22',
+    paidAt: '2026-01-22'
+  }
+];
+
+const PORTAL_BOOKINGS = [
+  {
+    id: 'RDV-2026-001',
+    quoteId: 'DV-2026-031',
+    clientId: 'c1',
+    clientName: 'Hôtel Kaloum',
+    date: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10),
+    slot: '08:00',
+    slotLabel: '08h00 – 10h00',
+    teamId: 'TE-1',
+    teamName: 'Équipe FOM 1',
+    status: 'confirme',
+    createdAt: new Date().toISOString().slice(0, 10)
+  }
+];
+
 module.exports = {
   COMPANY, USERS, PRODUCTS, CLIENTS, QUOTES, PAYMENTS, CHANTIERS, DRAFT_QUOTE,
-  buildQuoteLines, defaultSchedule
+  CLIENT_ORDERS, PORTAL_BOOKINGS,
+  buildQuoteLines, defaultSchedule, buildCalendar
 };
