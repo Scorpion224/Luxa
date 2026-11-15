@@ -1798,6 +1798,16 @@ tr.row-selected { background: #f7fbf8; }
 }
 @keyframes authspin { to { transform: rotate(360deg); } }
 
+.user-menu-sep { height: 1px; background: #ece7dd; margin: 6px 0; }
+.user-menu-label {
+  padding: 4px 12px 2px;
+  font-size: 10px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #9aa8a6;
+}
+a.user-menu-item { text-decoration: none; color: inherit; }
+
 .denied-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
 .auth-notice {

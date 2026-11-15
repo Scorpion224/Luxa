@@ -520,6 +520,7 @@
 
   async function afterSignIn(data) {
     state.authNotice = null;
+    try { sessionStorage.removeItem('ppg.loggedOut'); } catch (err) {}
     persistSession({ token: data.token, user: data.user });
     await loadData();
     const route = getRoute();
@@ -556,7 +557,11 @@
       fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }).catch(() => {});
     }
     state.draft = null;
-    if (!silent) { state.authNotice = null; saveDemoRole(''); }
+    if (!silent) {
+      state.authNotice = null;
+      saveDemoRole('');
+      try { sessionStorage.setItem('ppg.loggedOut', '1'); } catch (err) {}
+    }
     closeUserMenu();
     persistSession(null);
     closeModal();
@@ -602,6 +607,14 @@
       (user.role === 'admin'
         ? '<button class="user-menu-item client-preview" data-action="preview-client"><i class="fa-solid fa-store"></i> Espace client <span class="demo-tag">Démo</span></button>'
         : '') +
+      '<div class="user-menu-sep"></div>' +
+      '<div class="user-menu-label">Changer d’espace</div>' +
+      '<a class="user-menu-item" href="/demo/admin"><i class="fa-solid fa-user-shield"></i> Administrateur</a>' +
+      '<a class="user-menu-item" href="/demo/commercial"><i class="fa-solid fa-user-tie"></i> Commercial</a>' +
+      '<a class="user-menu-item" href="/demo/comptable"><i class="fa-solid fa-calculator"></i> Comptable</a>' +
+      '<a class="user-menu-item" href="/demo/stockiste"><i class="fa-solid fa-boxes-stacked"></i> Stockiste</a>' +
+      '<a class="user-menu-item" href="/demo/client"><i class="fa-solid fa-store"></i> Espace client</a>' +
+      '<div class="user-menu-sep"></div>' +
       '<button class="user-menu-item" data-action="sign-out"><i class="fa-solid fa-arrow-right-from-bracket"></i> Se déconnecter</button>';
     document.querySelector('.topbar').appendChild(menu);
     menu.addEventListener('click', (e) => {
@@ -3314,6 +3327,19 @@
     if (restored && restored.token) {
       persistSession(restored);
       state.authNotice = null;
+      // Changement d'espace demandé par l'URL (menu « Changer d'espace ») :
+      // on ouvre l'espace demandé même si une autre session était encore active.
+      let wanted = '';
+      try { wanted = new URLSearchParams(location.search).get('espace') || ''; } catch (err) {}
+      if (wanted && (!restored.user || restored.user.role !== wanted)) {
+        try {
+          const data = await api('/api/auth/demo', { method: 'POST', body: { role: wanted } });
+          if (data && data.token) {
+            persistSession({ token: data.token, user: data.user });
+            saveDemoRole(wanted);
+          }
+        } catch (err) { /* on garde la session courante */ }
+      }
     } else if (hadSession || rejected) {
       if (hadSession || loadDemoRole()) {
         state.authNotice = 'Votre session a expiré — reconnectez-vous en un clic sur un espace ci-dessous.';
@@ -3321,9 +3347,30 @@
       persistSession(null);
     }
     syncSessionUI();
+    // Accès direct : si aucune session valide n'a pu être restaurée, on ouvre
+    // automatiquement l'espace de démonstration (dernier utilisé, sinon administrateur).
+    // L'écran de connexion ne s'affiche plus que si l'utilisateur s'est déconnecté
+    // volontairement, ou en ajoutant ?connexion=1 à l'adresse.
     if (!state.session) {
-      renderLoginScreen();
-      return;
+      let voluntaryLogout = false;
+      try { voluntaryLogout = sessionStorage.getItem('ppg.loggedOut') === '1'; } catch (err) {}
+      let forceLogin = false;
+      try { forceLogin = new URLSearchParams(location.search).get('connexion') === '1'; } catch (err) {}
+      if (!voluntaryLogout && !forceLogin) {
+        const role = loadDemoRole() || 'admin';
+        try {
+          const data = await api('/api/auth/demo', { method: 'POST', body: { role: role } });
+          if (data && data.token) {
+            saveDemoRole(role);
+            persistSession({ token: data.token, user: data.user });
+            state.authNotice = null;
+          }
+        } catch (err) { /* serveur injoignable : écran de connexion classique */ }
+      }
+      if (!state.session) {
+        renderLoginScreen();
+        return;
+      }
     }
     await loadData();
 
