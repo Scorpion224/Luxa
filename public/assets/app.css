@@ -1744,6 +1744,31 @@ tr.row-selected { background: #f7fbf8; }
 }
 .auth-status.warn { color: #b0731a; font-weight: 600; }
 
+.auth-reset { margin: 8px 0 0; text-align: center; }
+.auth-reset .link-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #6f827f; }
+.auth-reset .link-btn:hover { color: var(--teal, #0f6b60); text-decoration: underline; }
+
+.auth-demo-btn.busy {
+  border-color: var(--teal, #0f6b60);
+  background: #eef7f5;
+  cursor: progress;
+  opacity: .9;
+}
+.auth-demo-btn.busy .auth-demo-role { color: var(--teal, #0f6b60); }
+.auth-demo-btn.busy .auth-demo-role::after {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-left: 7px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: authspin .7s linear infinite;
+  vertical-align: -1px;
+}
+@keyframes authspin { to { transform: rotate(360deg); } }
+
 .denied-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
 .auth-notice {

@@ -69,12 +69,18 @@
         throw new Error('Réponse illisible du serveur (HTTP ' + res.status + ')');
       }
     }
-    if (res.status === 401 && !String(path).startsWith('/api/auth/login')) {
+    if (res.status === 401 && !String(path).startsWith('/api/auth/')) {
       state.authNotice = 'Votre session a expiré. Reconnectez-vous pour continuer.';
       signOut(true);
-      throw new Error('Session expirée, veuillez vous reconnecter');
+      const expired = new Error('Session expirée, veuillez vous reconnecter');
+      expired.status = 401;
+      throw expired;
     }
-    if (!res.ok) throw new Error((data && data.error) || 'Erreur serveur');
+    if (!res.ok) {
+      const error = new Error((data && data.error) || 'Erreur serveur (HTTP ' + res.status + ')');
+      error.status = res.status;
+      throw error;
+    }
     return data;
   }
 
@@ -307,6 +313,8 @@
       '</div></div></div>';
   }
 
+  let loginBusy = false;
+
   function renderLoginScreen() {
     const demo = (state.roles && state.roles.roles) || [];
     const accounts = demo.length ? demo : [
@@ -356,6 +364,8 @@
           '<p class="auth-switch">Pas encore de compte ? ' +
             '<button type="button" class="link-btn" data-action="open-register">Créer mon compte client</button></p>' +
           '<p class="auth-status" id="authStatus">Version ' + APP_VERSION + ' · vérification du serveur…</p>' +
+          '<p class="auth-reset"><button type="button" class="link-btn" data-action="hard-reset">' +
+            '<i class="fa-solid fa-rotate-right"></i> Un souci pour vous connecter ? Recharger l’application</button></p>' +
           '<div class="auth-demo">' +
             '<div class="auth-demo-title">Comptes de démonstration</div>' +
             '<div class="auth-demo-list">' + demoButtons + '</div>' +
@@ -397,15 +407,69 @@
         });
     }
 
-    view.querySelectorAll('[data-demo-role]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.getElementById('loginEmail').value = btn.dataset.demoEmail || '';
-        document.getElementById('loginPassword').value = btn.dataset.demoPassword || '';
-        errorBox.hidden = true;
-        signInDemo(btn.dataset.demoRole).catch((err) => showError(err.message));
-      });
-    });
+    // La délégation d'événements (attachée une seule fois au document) reste valable
+    // même si l'écran de connexion est redessiné : un clic ne peut plus rester sans effet.
   }
+
+  function startDemoLogin(btn) {
+    if (!btn || loginBusy) return;
+    loginBusy = true;
+    const emailEl = document.getElementById('loginEmail');
+    const passEl = document.getElementById('loginPassword');
+    const box = document.getElementById('loginError');
+    if (emailEl) emailEl.value = btn.dataset.demoEmail || '';
+    if (passEl) passEl.value = btn.dataset.demoPassword || '';
+    if (box) { box.hidden = true; box.textContent = ''; }
+    const label = btn.querySelector('.auth-demo-role');
+    const original = label ? label.textContent : '';
+    if (label) label.textContent = 'Connexion…';
+    btn.classList.add('busy');
+    const reset = () => {
+      loginBusy = false;
+      btn.classList.remove('busy');
+      if (label) label.textContent = original;
+    };
+    // Filet de sécurité : si rien ne se passe au bout de 12 s, on l'affiche noir sur blanc.
+    const watchdog = setTimeout(() => {
+      if (!loginBusy) return;
+      if (box) {
+        box.textContent = 'La connexion prend trop de temps. Vérifiez votre connexion puis cliquez sur « Recharger l’application ».';
+        box.hidden = false;
+      }
+      reset();
+    }, 12000);
+    signInDemo(btn.dataset.demoRole, { email: btn.dataset.demoEmail, password: btn.dataset.demoPassword })
+      .then(() => { clearTimeout(watchdog); loginBusy = false; })
+      .catch((err) => {
+        clearTimeout(watchdog);
+        reset();
+        if (box) { box.textContent = err && err.message ? err.message : 'Connexion impossible'; box.hidden = false; }
+      });
+  }
+
+  // Aucune erreur JavaScript ne doit rester invisible sur l'écran de connexion.
+  function surfaceLoginError(message) {
+    if (!document.getElementById('loginForm')) return;
+    const box = document.getElementById('loginError');
+    if (!box) return;
+    box.textContent = message;
+    box.hidden = false;
+  }
+  window.addEventListener('error', (e) => {
+    surfaceLoginError('Erreur inattendue : ' + ((e && e.message) || 'inconnue'));
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    const reason = e && e.reason;
+    surfaceLoginError('Erreur inattendue : ' + ((reason && reason.message) || reason || 'inconnue'));
+  });
+
+  document.addEventListener('click', (e) => {
+    const demoBtn = e.target.closest('[data-demo-role]');
+    if (demoBtn) {
+      e.preventDefault();
+      startDemoLogin(demoBtn);
+    }
+  });
 
   async function afterSignIn(data) {
     state.authNotice = null;
@@ -423,8 +487,17 @@
     await afterSignIn(data);
   }
 
-  async function signInDemo(role) {
-    const data = await api('/api/auth/demo', { method: 'POST', body: { role: role } });
+  async function signInDemo(role, credentials) {
+    const creds = credentials || {};
+    let data;
+    try {
+      data = await api('/api/auth/demo', { method: 'POST', body: { role: role } });
+    } catch (err) {
+      // Serveur plus ancien (route absente) ou compte refusé : on tente la connexion classique
+      // avec les identifiants de démonstration affichés sur le bouton.
+      if (!creds.email || !creds.password) throw err;
+      data = await api('/api/auth/login', { method: 'POST', body: { email: creds.email, password: creds.password } });
+    }
     await afterSignIn(data);
   }
 
@@ -3082,6 +3155,17 @@
       }
     }
   }
+
+  actions['hard-reset'] = () => {
+    try { localStorage.clear(); } catch (err) {}
+    try { sessionStorage.clear(); } catch (err) {}
+    try {
+      if (window.caches && caches.keys) {
+        caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
+      }
+    } catch (err) {}
+    location.replace(location.pathname + '?v=' + Date.now());
+  };
 
   document.addEventListener('click', (e) => {
     const el = e.target.closest('[data-action]');
