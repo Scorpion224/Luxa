@@ -737,6 +737,22 @@ function openDemoSession(role) {
   return { token, user };
 }
 
+// Entrée directe par URL : GET /demo/client ouvre la session et redirige dans l'espace.
+// Utile quand l'aperçu intégré ne transmet pas les clics.
+app.get('/demo/:role', (req, res) => {
+  const opened = openDemoSession(req.params.role);
+  if (!opened) return res.redirect(303, '/?erreur=' + encodeURIComponent('Espace de démonstration inconnu : ' + req.params.role));
+  setSessionCookie(res, opened.token);
+  res.redirect(303, '/?espace=' + encodeURIComponent(opened.user.role) + '#/');
+});
+
+app.get('/api/auth/demo-link/:role', (req, res) => {
+  const opened = openDemoSession(req.params.role);
+  if (!opened) return res.status(404).json({ error: 'Espace inconnu' });
+  setSessionCookie(res, opened.token);
+  res.json({ token: opened.token, user: publicUser(opened.user) });
+});
+
 // Repli sans JavaScript : un formulaire HTML classique connecte et redirige.
 app.post('/api/auth/demo-form', (req, res) => {
   const opened = openDemoSession((req.body && req.body.role) || '');

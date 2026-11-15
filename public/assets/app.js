@@ -486,6 +486,17 @@
     box.hidden = false;
   }
 
+  document.addEventListener('keydown', (e) => {
+    if (!document.getElementById('loginForm')) return;
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    const index = ['1', '2', '3', '4', '5'].indexOf(e.key);
+    if (index === -1) return;
+    const buttons = Array.from(document.querySelectorAll('[data-demo-role]'));
+    const btn = buttons[index];
+    if (btn) { e.preventDefault(); startDemoLogin(btn); }
+  });
+
   document.addEventListener('submit', (e) => {
     const form = e.target;
     if (form && form.hasAttribute && form.hasAttribute('data-demo-form')) {
@@ -3315,6 +3326,21 @@
       return;
     }
     await loadData();
+
+    // Arrivée sur l'URL racine ou sur une page interdite à ce rôle : on ouvre
+    // directement la première page autorisée au lieu d'afficher « Accès restreint ».
+    const landing = getRoute();
+    if (!canRoute(landing)) {
+      const target = firstAllowedRoute();
+      const url = new URL(location.href);
+      if (url.searchParams.has('espace')) {
+        url.searchParams.delete('espace');
+        history.replaceState(null, '', url.pathname + (url.search || '') + '#/' + target);
+      } else {
+        location.hash = '#/' + target;
+        return;
+      }
+    }
     render();
   })();
 })();
